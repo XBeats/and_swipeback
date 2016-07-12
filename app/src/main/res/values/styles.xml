@@ -1,0 +1,38 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+    </style>
+
+    <style name="JK.SwipeBack.Transparent.Theme" parent="AppTheme">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowAnimationStyle">@style/JK.Animation.SlidingBack</item>
+        <item name="android:actionBarStyle">@style/JKActionBar.Custom</item>
+    </style>
+
+    <style name="JKActionBar.Custom" parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">
+        <item name="displayOptions">showCustom</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="background">@android:color/transparent</item>
+        <item name="android:displayOptions" tools:ignore="NewApi">showCustom</item>
+        <item name="android:height">?actionBarSize</item>
+    </style>
+
+    <style name="JK.Animation.SlidingBack" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:activityOpenExitAnimation">@anim/slide_out_right</item>
+        <item name="android:activityCloseEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:activityCloseExitAnimation">@anim/slide_out_right</item>
+        <item name="android:wallpaperOpenEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:wallpaperOpenExitAnimation">@anim/slide_out_right</item>
+        <item name="android:wallpaperCloseEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:wallpaperCloseExitAnimation">@anim/slide_out_right</item>
+        <item name="android:wallpaperIntraOpenEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:wallpaperIntraOpenExitAnimation">@anim/slide_out_right</item>
+        <item name="android:wallpaperIntraCloseEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:wallpaperIntraCloseExitAnimation">@anim/slide_out_right</item>
+    </style>
+
+</resources>

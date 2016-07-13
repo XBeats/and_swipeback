@@ -6,14 +6,15 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.support.v4.widget.SlidingPaneLayout;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.TranslateAnimation;
-import android.support.v4.widget.SlidingPaneLayout;
 
+import java.io.Serializable;
 import java.lang.reflect.Field;
 
 /**
@@ -109,7 +110,12 @@ public class SlideBackLayout extends SlidingPaneLayout{
             }
 
             @Override
-            public void onPanelSlide(View panel, float slideOffset) {}
+            public void onPanelSlide(View panel, float slideOffset) {
+                if(mOnScrollHook != null) {
+                    final float left = panel.getMeasuredWidth() * slideOffset;
+                    mOnScrollHook.onScroll(left);
+                }
+            }
 
             @Override
             public void onPanelClosed(View panel) {}
@@ -121,11 +127,19 @@ public class SlideBackLayout extends SlidingPaneLayout{
         addView(leftView, 0);
 
         ViewGroup decor = (ViewGroup) activity.getWindow().getDecorView();
-        ViewGroup decorChild = (ViewGroup) decor.getChildAt(0);
+        final ViewGroup decorChild = (ViewGroup) decor.getChildAt(0);
         decorChild.setBackgroundColor(getResources().getColor(android.R.color.transparent));
         decor.removeView(decorChild);
         decor.addView(this);
         addView(decorChild, 1);
+
+        final int width = getResources().getDisplayMetrics().widthPixels;
+        mOnScrollContainer = new OnScrollListener() {
+            @Override
+            public void onScroll(float distance) {
+                decorChild.setX(-width / 3 + distance / 3);
+            }
+        };
     }
 
     @Override
@@ -207,5 +221,35 @@ public class SlideBackLayout extends SlidingPaneLayout{
         public CustomBehindView(Context context, AttributeSet attrs, int defStyleAttr) {
             super(context, attrs, defStyleAttr);
         }
+    }
+
+
+    private OnScrollListener mOnScrollHook; //钩子
+    private OnScrollListener mOnScrollContainer;  //容器
+
+    public OnScrollListener getOnScrollContainer() {
+        return mOnScrollContainer;
+    }
+
+    public interface OnScrollListener extends Serializable{
+        void onScroll(float distance);
+    }
+
+    public void setOnScrollHook(OnScrollListener onScrollHook) {
+        mOnScrollHook = onScrollHook;
+        if(mOnScrollHook == null) {
+            mIsSlidingAvailable = false;
+        }
+        mOnScrollListener = null;
+    }
+
+    private static SlideBackLayout.OnScrollListener mOnScrollListener; //中间作用
+
+    public static SlideBackLayout.OnScrollListener getOnScrollListener() {
+        return mOnScrollListener;
+    }
+
+    public static void setOnScrollListener(SlideBackLayout.OnScrollListener onScrollListener) {
+        mOnScrollListener = onScrollListener;
     }
 }

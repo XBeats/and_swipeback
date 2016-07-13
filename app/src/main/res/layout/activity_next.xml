@@ -21,4 +21,11 @@
         android:onClick="nextPage"
         android:text="下一页" />
 
+    <TextView
+        android:id="@+id/text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:text="当前页"/>
+
 </RelativeLayout>

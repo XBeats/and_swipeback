@@ -54,6 +54,6 @@ public class NextActivity extends BaseActivity {
 
     @Override
     protected boolean isSupportToSlideBack() {
-        return false;
+        return true;
     }
 }

@@ -40,7 +40,7 @@ public class SlideBackLayout extends SlidingPaneLayout{
 
 
     private int mTouchMode = TOUCH_MODE_MARGIN;
-    private int mShadowWidth = 15; //px
+    private int mShadowWidth = 50; //px
     private boolean mIsSlidingAvailable = true;
     private boolean mIsCurrentTouchAllowed;
     private Drawable mShadowDrawable;
@@ -113,12 +113,16 @@ public class SlideBackLayout extends SlidingPaneLayout{
             public void onPanelSlide(View panel, float slideOffset) {
                 if(mOnScrollHook != null) {
                     final float left = panel.getMeasuredWidth() * slideOffset;
-                    mOnScrollHook.onScroll(left);
+                    mOnScrollHook.onScroll(false, left);
                 }
             }
 
             @Override
-            public void onPanelClosed(View panel) {}
+            public void onPanelClosed(View panel) {
+                if(mOnScrollHook != null) {
+                    mOnScrollHook.onScroll(true, 0);
+                }
+            }
         });
         setSliderFadeColor(getResources().getColor(android.R.color.transparent));
 
@@ -136,8 +140,14 @@ public class SlideBackLayout extends SlidingPaneLayout{
         final int width = getResources().getDisplayMetrics().widthPixels;
         mOnScrollContainer = new OnScrollListener() {
             @Override
-            public void onScroll(float distance) {
-                decorChild.setX(-width / 3 + distance / 3);
+            public void onScroll(boolean isReset, float distance) {
+                float moveDistance;
+                if(isReset) {
+                    moveDistance = decorChild.getLeft();
+                } else {
+                    moveDistance = -width / 3 + distance / 3;
+                }
+                decorChild.setX(moveDistance);
             }
         };
     }
@@ -201,7 +211,7 @@ public class SlideBackLayout extends SlidingPaneLayout{
         final int mShadowWidth = this.mShadowWidth; //px
 
         if(mShadowDrawable == null) {
-            int colors[] = {0x00000000, 0x11000000, 0x33000000};//分别为开始颜色，中间夜色，结束颜色
+            int colors[] = {0x00000000, 0x17000000, 0x43000000};//分别为开始颜色，中间夜色，结束颜色
             mShadowDrawable = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors);
         }
         mShadowDrawable.setBounds(left - mShadowWidth, 0, left, getHeight());
@@ -232,7 +242,7 @@ public class SlideBackLayout extends SlidingPaneLayout{
     }
 
     public interface OnScrollListener extends Serializable{
-        void onScroll(float distance);
+        void onScroll(boolean isReset, float distance);
     }
 
     public void setOnScrollHook(OnScrollListener onScrollHook) {
@@ -251,5 +261,14 @@ public class SlideBackLayout extends SlidingPaneLayout{
 
     public static void setOnScrollListener(SlideBackLayout.OnScrollListener onScrollListener) {
         mOnScrollListener = onScrollListener;
+    }
+
+    public static SlideBackLayout.OnScrollListener getDefaultScrollListener() {
+        return new OnScrollListener() {
+            @Override
+            public void onScroll(boolean isReset, float distance) {
+
+            }
+        };
     }
 }

@@ -26,7 +26,7 @@ public class BaseActivity extends AppCompatActivity {
      */
     private void initSlideBackFinish() {
         if (isSupportToSlideBack() || isSupportBeSlideBack()) {
-            getSlideBackLayout().setSlidingAvailable(isSupportToSlideBack());
+            getSlideBackLayout();
         } else {
             ViewGroup decor = (ViewGroup) getWindow().getDecorView();
             ViewGroup decorChild = (ViewGroup) decor.getChildAt(0);
@@ -66,21 +66,28 @@ public class BaseActivity extends AppCompatActivity {
         return true;
     }
 
-    private boolean isNeedSlideBack = true;
+    private boolean mIsNeverBack = false;
 
     /**
-     * 是否需要滑动返回
-     * @param needSlideBack
+     * 是否再也不返回当前页面
+     * @param neverBack
      */
-    protected void setNeedSlideBack(boolean needSlideBack) {
-        isNeedSlideBack = needSlideBack;
+    protected void setNeverSlideBack(boolean neverBack) {
+        mIsNeverBack = neverBack;
     }
 
     @Override
     public void startActivityForResult(Intent intent, int requestCode, Bundle options) {
-        if(isNeedSlideBack && isSupportBeSlideBack()){
-            SlideBackLayout.setOnScrollListener(mSlideBackLayout == null ? null : mSlideBackLayout.getOnScrollContainer());
+        SlideBackLayout.OnScrollListener onScrollListener;
+        if(mIsNeverBack) {
+            onScrollListener = null;
+        } else if(!mIsNeverBack && isSupportBeSlideBack()){
+            onScrollListener = mSlideBackLayout == null ?
+                    SlideBackLayout.getDefaultScrollListener() : mSlideBackLayout.getOnScrollContainer();
+        } else {
+            onScrollListener = SlideBackLayout.getDefaultScrollListener();
         }
+        SlideBackLayout.setOnScrollListener(onScrollListener);
         super.startActivityForResult(intent, requestCode, options);
     }
 }

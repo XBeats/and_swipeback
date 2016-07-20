@@ -1,16 +1,23 @@
-package com.xbeats.swipebacksample;
+package com.xbeats.swipebacksample.applicationtest;
 
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.xbeats.swipebacksample.R;
+
 import java.util.Random;
 
-public class NextActivity extends BaseActivity {
+/**
+ * Created by fhf11991 on 2016/7/18.
+ */
+
+public class ApplicationTestActivity extends AppCompatActivity{
 
     private static int Page = 1;
     private int page;
@@ -34,26 +41,36 @@ public class NextActivity extends BaseActivity {
         TextView textView = (TextView) findViewById(R.id.text);
         page = Page;
         textView.setText("当前页" + page);
+
+        overridePendingTransition(0, android.R.anim.fade_out);
+    }
+
+    @Override
+    public void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        SlideBackLayout mSlideBackLayout = new SlideBackLayout(this);
+        mSlideBackLayout.attachViewToActivity(this);
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        overridePendingTransition(0, android.R.anim.fade_out);
     }
 
     public void nextPage(View v) {
-        startActivity(new Intent(this, NextActivity.class));
+        startActivity(new Intent(this, ApplicationTestActivity.class));
         Page ++;
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Log.d("NextActivity", "onDestroy  " + "  page = " + page);
+    protected void onResume() {
+        super.onResume();
     }
 
     @Override
-    protected boolean isSupportBeSlideBack() {
-        return true;
-    }
-
-    @Override
-    protected boolean isSupportToSlideBack() {
-        return true;
+    protected void onRestart() {
+        Log.d("ApplicationTestActivity", "onRestart");
+        super.onRestart();
     }
 }

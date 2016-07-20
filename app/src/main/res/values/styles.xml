@@ -1,23 +1,22 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- Customize your theme here. -->
+        <!--<item name="android:windowIsTranslucent">true</item>-->
     </style>
 
-
-    <style name="TransparentBackgroundTheme" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="windowActionBar">true</item>
+    <style name="TransparentBackgroundTheme.AppTheme" parent="AppTheme">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+        <!--<item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>-->
     </style>
 
     <style name="JK.SwipeBack.Transparent.Theme" parent="AppTheme">
         <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowAnimationStyle">@style/JK.Animation.SlidingBack</item>
-        <item name="android:actionBarStyle">@style/JKActionBar.Custom</item>
+        <!--<item name="android:windowIsTranslucent">true</item>-->
+        <!--<item name="android:windowAnimationStyle">@style/JK.Animation.SlidingBack</item>-->
+        <!--<item name="android:actionBarStyle">@style/JKActionBar.Custom</item>-->
     </style>
 
     <style name="JKActionBar.Custom" parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">
@@ -41,6 +40,21 @@
         <item name="android:wallpaperIntraOpenExitAnimation">@anim/slide_out_right</item>
         <item name="android:wallpaperIntraCloseEnterAnimation">@anim/slide_in_right</item>
         <item name="android:wallpaperIntraCloseExitAnimation">@anim/slide_out_right</item>
+    </style>
+
+    <style name="NoActivityAnimation.AppTheme" parent="AppTheme">
+        <item name="android:activityOpenEnterAnimation">@null</item>
+        <item name="android:activityOpenExitAnimation">@null</item>
+        <item name="android:activityCloseEnterAnimation">@null</item>
+        <item name="android:activityCloseExitAnimation">@null</item>
+        <item name="android:taskOpenEnterAnimation">@null</item>
+        <item name="android:taskOpenExitAnimation">@null</item>
+        <item name="android:taskCloseEnterAnimation">@null</item>
+        <item name="android:taskCloseExitAnimation">@null</item>
+        <item name="android:taskToFrontEnterAnimation">@null</item>
+        <item name="android:taskToFrontExitAnimation">@null</item>
+        <item name="android:taskToBackEnterAnimation">@null</item>
+        <item name="android:taskToBackExitAnimation">@null</item>
     </style>
 
 </resources>

@@ -1,17 +1,16 @@
 package com.xbeats.swipebacksample.copylastactivityview;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.xbeats.swipebacksample.R;
-import com.xbeats.swipebacksample.applicationtest.CustomApplication;
 
 import java.util.Random;
 
@@ -44,8 +43,6 @@ public class CopyLastViewActivity extends AppCompatActivity{
         TextView textView = (TextView) findViewById(R.id.text);
         page = Page;
         textView.setText("当前页" + page);
-
-        overridePendingTransition(0, android.R.anim.fade_out);
     }
 
     @Override
@@ -58,47 +55,22 @@ public class CopyLastViewActivity extends AppCompatActivity{
     @Override
     public void finish() {
         super.finish();
-        overridePendingTransition(0, android.R.anim.fade_out);
+        overridePendingTransition(0, 0);
     }
 
     public void nextPage(View v) {
+//        TextView textView = new TextView(this);
+//        textView.setText("测试");
+//        textView.setBackgroundColor(getResources().getColor(android.R.color.holo_red_dark));
+//        WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
+//        layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+//        layoutParams.width = WindowManager.LayoutParams.WRAP_CONTENT;
+//        layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+//        layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
+////        layoutParams.token = getWindow().getDecorView().getWindowToken();
+//        getWindowManager().addView(textView, layoutParams);
+
         startActivity(new Intent(this, CopyLastViewActivity.class));
-        Page ++;
-    }
-
-    private void removeLastView() {
-        if (getApplicationContext() instanceof CustomApplication) {
-            CustomApplication customApplication = ((CustomApplication) getApplicationContext());
-            CopyLastViewActivity lastActivity = (CopyLastViewActivity) customApplication.getActivityLifecycleHelper().getCurrentActivity();
-            if(lastActivity == this)return;
-            ViewGroup leftView = lastActivity.mSlideBackLayout.leftView;
-
-            ViewGroup contentView = (ViewGroup) findViewById(android.R.id.content);
-
-            View displayView = leftView.getChildAt(0);
-            leftView.removeView(displayView);
-            contentView.addView(displayView);
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        removeLastView();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-    }
-
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
+//        Page ++;
     }
 }

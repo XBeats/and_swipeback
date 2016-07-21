@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="bg_default">#e8edf2</color>
+
+
+    <color name="blue">#2290f9</color>
+
+    <color name="blue_pressed">#007aef</color>
 </resources>

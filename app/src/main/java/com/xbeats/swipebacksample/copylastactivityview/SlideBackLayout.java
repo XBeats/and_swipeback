@@ -3,6 +3,9 @@ package com.xbeats.swipebacksample.copylastactivityview;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.support.v4.widget.SlidingPaneLayout;
@@ -11,8 +14,10 @@ import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 
+import com.xbeats.swipebacksample.Utils;
 import com.xbeats.swipebacksample.applicationtest.CustomApplication;
 
 import java.lang.reflect.Field;
@@ -46,13 +51,7 @@ public class SlideBackLayout extends SlidingPaneLayout {
     private boolean mIsSlidingAvailable = true;
     private boolean mIsCurrentTouchAllowed;
     private Drawable mShadowDrawable;
-    private boolean mIsSliding;
     private int mMarginThreshold;
-    public CustomBehindView leftView;
-
-    public void setShadowWidth(int shadowWidth) {
-        mShadowWidth = shadowWidth;
-    }
 
     public void setShadowDrawable(Drawable shadow) {
         mShadowDrawable = shadow;
@@ -60,10 +59,6 @@ public class SlideBackLayout extends SlidingPaneLayout {
 
     public void setSlidingAvailable(boolean slidingAvailable) {
         mIsSlidingAvailable = slidingAvailable;
-    }
-
-    public boolean isSliding() {
-        return mIsSliding;
     }
 
     public SlideBackLayout(Context context) {
@@ -101,70 +96,57 @@ public class SlideBackLayout extends SlidingPaneLayout {
         mTouchMode = i;
     }
 
-    public boolean isPanelOpened;
+    private ViewGroup displayView;
 
     public void attachViewToActivity(final Activity activity) {
         setPanelSlideListener(new android.support.v4.widget.SlidingPaneLayout.PanelSlideListener() {
             @Override
             public void onPanelOpened(View panel) {
-//                isPanelOpened = true;
-//                if (getContext().getApplicationContext() instanceof CustomApplication) {
-//                    if (leftView.getChildCount() == 0) return;
-//                    CustomApplication customApplication = ((CustomApplication) getContext().getApplicationContext());
-//                    Activity lastActivity = customApplication.getActivityLifecycleHelper().getLastActivity();
-//                    ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
-//
-//                    View displayView = leftView.getChildAt(0);
-//                    leftView.removeView(displayView);
-//                    contentView.addView(displayView);
-//                    displayView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-//                }
-//                postDelayed(new Runnable() {
-//                    @Override
-//                    public void run() {
-////                        activity.overridePendingTransition(0, 0);
-//                        activity.finish();
-//                    }
-//                }, 600);
+                CustomApplication customApplication = ((CustomApplication) panel.getContext().getApplicationContext());
+                Activity lastActivity = customApplication.getActivityLifecycleHelper().getLastActivity();
+                ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
+
+                activity.getWindowManager().removeView(displayView);
+                View content = displayView.getChildAt(0);
+                displayView.removeView(content);
+                contentView.addView(content, 0);
+
+                displayView = null;
                 activity.finish();
             }
 
             @Override
             public void onPanelSlide(View panel, float slideOffset) {
-                if (getContext().getApplicationContext() instanceof CustomApplication) {
-                    if (leftView.getChildCount() == 0) {
-                        CustomApplication customApplication = ((CustomApplication) getContext().getApplicationContext());
-                        Activity lastActivity = customApplication.getActivityLifecycleHelper().getLastActivity();
-                        ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
-                        View displayView = contentView.getChildAt(0);
-                        contentView.removeView(displayView);
-                        leftView.addView(displayView);
-                    }
+                if( !(panel.getContext().getApplicationContext() instanceof CustomApplication))return;
 
-                    final int width = getResources().getDisplayMetrics().widthPixels;
-                    final float left = panel.getMeasuredWidth() * slideOffset;
-                    leftView.getChildAt(0).setX(-width / 3 + left / 3);
-                }
+                displayView.setVisibility(View.VISIBLE);
+                final int width = getResources().getDisplayMetrics().widthPixels;
+                final float left = panel.getMeasuredWidth() * slideOffset;
+
+//                float distance = -width / 3 + left / 3;
+                float distance = left - width;
+                displayView.getChildAt(0).setX(distance);
             }
 
             @Override
             public void onPanelClosed(View panel) {
-//                leftView.getChildAt(0).setX(getChildAt(1).getLeft());
-                if (getContext().getApplicationContext() instanceof CustomApplication) {
-                    if (leftView.getChildCount() == 0) return;
-                    CustomApplication customApplication = ((CustomApplication) getContext().getApplicationContext());
-                    Activity lastActivity = customApplication.getActivityLifecycleHelper().getLastActivity();
-                    ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
+                if( !(panel.getContext().getApplicationContext() instanceof CustomApplication))return;
 
-                    View displayView = leftView.getChildAt(0);
-                    leftView.removeView(displayView);
-                    contentView.addView(displayView);
-                }
+                CustomApplication customApplication = ((CustomApplication) panel.getContext().getApplicationContext());
+                Activity lastActivity = customApplication.getActivityLifecycleHelper().getLastActivity();
+                ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
+
+                activity.getWindowManager().removeViewImmediate(displayView);
+                View content = displayView.getChildAt(0);
+                displayView.removeView(content);
+                contentView.addView(content, 0);
+//                lastActivity.getWindowManager().updateViewLayout(contentView, lastActivity.getWindow().getAttributes());
+                displayView = null;
             }
         });
         setSliderFadeColor(getResources().getColor(android.R.color.transparent));
 
-        leftView = new CustomBehindView(activity);
+        View leftView = new View(activity);
         leftView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         addView(leftView, 0);
 
@@ -185,22 +167,68 @@ public class SlideBackLayout extends SlidingPaneLayout {
         mIsCurrentTouchAllowed = canEventSlide(ev);
 
         if (mIsCurrentTouchAllowed) {
-            return mIsSliding = super.onInterceptTouchEvent(ev);
+            return super.onInterceptTouchEvent(ev);
         } else {
-            return mIsSliding = false;
+            return false;
         }
     }
+
+    private boolean isInControlTime = true;
+    private boolean isFirstDelayed = true;
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
 
         mIsCurrentTouchAllowed = canEventSlide(ev);
 
-        if (mIsCurrentTouchAllowed) {
-            return mIsSliding = super.onTouchEvent(ev);
-        } else {
-            return mIsSliding = false;
+        if(!mIsCurrentTouchAllowed)return false;
+        switch (ev.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                if (displayView == null) {
+                    CustomApplication customApplication = ((CustomApplication) getContext().getApplicationContext());
+                    Activity lastActivity = customApplication.getActivityLifecycleHelper().getLastActivity();
+                    ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
+                    View content = contentView.getChildAt(0);
+                    contentView.removeView(content);
+
+                    displayView = new FrameLayout(getContext());
+                    displayView.setVisibility(View.INVISIBLE);
+                    displayView.addView(content);
+
+                    WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
+                    layoutParams.format = PixelFormat.RGBA_8888;
+                    layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT;
+                    layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+                    layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                    layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION;
+                    ((Activity)getContext()).getWindowManager().addView(displayView, layoutParams);
+
+//                    final int width = getResources().getDisplayMetrics().widthPixels;
+//                    displayView.getChildAt(0).setX(- width / 3);
+                }
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if(isInControlTime) {
+                    if(isFirstDelayed) {
+                        isFirstDelayed = false;
+                        postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                isInControlTime = false;
+                                isFirstDelayed = true;
+                            }
+                        }, 60);
+                    }
+                    return true;
+                }
+                break;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                isInControlTime = true;
+                break;
+            default:break;
         }
+        return super.onTouchEvent(ev);
     }
 
     private boolean canEventSlide(MotionEvent ev) {
@@ -231,7 +259,7 @@ public class SlideBackLayout extends SlidingPaneLayout {
     @Override
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
-        drawShadow(canvas);
+//        drawShadow(canvas);
     }
 
     public void drawShadow(Canvas canvas) {
@@ -245,21 +273,5 @@ public class SlideBackLayout extends SlidingPaneLayout {
         mShadowDrawable.setBounds(left - mShadowWidth, 0, left, getHeight());
         mShadowDrawable.draw(canvas);
     }
-
-    public static class CustomBehindView extends FrameLayout {
-
-        public CustomBehindView(Context context) {
-            this(context, null);
-        }
-
-        public CustomBehindView(Context context, AttributeSet attrs) {
-            this(context, attrs, 0);
-        }
-
-        public CustomBehindView(Context context, AttributeSet attrs, int defStyleAttr) {
-            super(context, attrs, defStyleAttr);
-        }
-    }
-
 }
 

@@ -41,6 +41,12 @@
         <activity
             android:name="com.xbeats.swipebacksample.flingback.FlingBackActivity"
             android:label="SlideBackActivity"/>
+        <activity
+            android:name="com.xbeats.swipebacksample.windowmanager.BaseActivity"
+            android:label="SlideBackActivity"/>
+        <activity
+            android:name="com.xbeats.swipebacksample.popwindow.PopupWindowActivity"
+            android:label="SlideBackActivity"/>
     </application>
 
 </manifest>

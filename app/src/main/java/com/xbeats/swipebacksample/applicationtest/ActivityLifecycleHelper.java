@@ -70,7 +70,7 @@ public class ActivityLifecycleHelper implements Application.ActivityLifecycleCal
         return activity;
     }
 
-    public Activity getLastActivity() {
+    public Activity getPreActivity() {
         int size = activityStack.size();
         if(size < 2)return null;
         return activityStack.elementAt(size - 2);

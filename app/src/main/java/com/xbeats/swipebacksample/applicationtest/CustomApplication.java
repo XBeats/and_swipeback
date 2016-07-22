@@ -24,7 +24,7 @@ public class CustomApplication extends Application{
 
     public void onSlideBack(boolean isReset, float distance) {
         if(mActivityLifecycleHelper != null) {
-            Activity lastActivity = mActivityLifecycleHelper.getLastActivity();
+            Activity lastActivity = mActivityLifecycleHelper.getPreActivity();
             if(lastActivity != null) {
                 View contentView = lastActivity.findViewById(android.R.id.content);
                 if(isReset) {

@@ -1,13 +1,8 @@
-package com.xbeats.swipebacksample.copylastactivityview;
+package com.xbeats.swipebacksample.popwindow;
 
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.PixelFormat;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
 import android.support.v4.widget.SlidingPaneLayout;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -15,9 +10,11 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.PopupWindow;
+import android.widget.TextView;
 
+import com.xbeats.swipebacksample.R;
 import com.xbeats.swipebacksample.applicationtest.CustomApplication;
 
 import java.lang.reflect.Field;
@@ -52,6 +49,7 @@ public class SlideBackLayout extends SlidingPaneLayout {
     private boolean mIsCurrentTouchAllowed;
     private Drawable mShadowDrawable;
     private int mMarginThreshold;
+    private TextView mTextView;
 
     public void setShadowDrawable(Drawable shadow) {
         mShadowDrawable = shadow;
@@ -117,36 +115,23 @@ public class SlideBackLayout extends SlidingPaneLayout {
 
             @Override
             public void onPanelSlide(View panel, float slideOffset) {
-//                if( !(panel.getContext().getApplicationContext() instanceof CustomApplication))return;
-//
-//                displayView.setVisibility(View.VISIBLE);
-//                final int width = getResources().getDisplayMetrics().widthPixels;
-//                final float left = panel.getMeasuredWidth() * slideOffset;
-//
-////                float distance = -width / 3 + left / 3;
-//                float distance = left - width;
-//                displayView.getChildAt(0).setX(distance);
-
-//                final int width = getResources().getDisplayMetrics().widthPixels;
-                final float left = panel.getMeasuredWidth() * slideOffset;
-//                float distance = left - width;
-//                displayView.setWidth((int)left);
+//                mTextView.setX(panel.getLeft());
             }
 
             @Override
             public void onPanelClosed(View panel) {
                 if( !(panel.getContext().getApplicationContext() instanceof CustomApplication))return;
 
-                CustomApplication customApplication = ((CustomApplication) panel.getContext().getApplicationContext());
-                Activity lastActivity = customApplication.getActivityLifecycleHelper().getPreActivity();
-                ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
-
-                activity.getWindowManager().removeViewImmediate(displayView);
-                View content = displayView.getChildAt(0);
-                displayView.removeView(content);
-                contentView.addView(content, 0);
-//                lastActivity.getWindowManager().updateViewLayout(contentView, lastActivity.getWindow().getAttributes());
-                displayView = null;
+//                CustomApplication customApplication = ((CustomApplication) panel.getContext().getApplicationContext());
+//                Activity lastActivity = customApplication.getActivityLifecycleHelper().getPreActivity();
+//                ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
+//
+//                activity.getWindowManager().removeViewImmediate(displayView);
+//                View content = displayView.getChildAt(0);
+//                displayView.removeView(content);
+//                contentView.addView(content, 0);
+////                lastActivity.getWindowManager().updateViewLayout(contentView, lastActivity.getWindow().getAttributes());
+//                displayView = null;
             }
         });
         setSliderFadeColor(getResources().getColor(android.R.color.transparent));
@@ -165,9 +150,6 @@ public class SlideBackLayout extends SlidingPaneLayout {
             contentView.addView(this);
             addView(contentChild, 1);
         }
-
-//        activity.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-//        activity.getWindow().getDecorView().setBackgroundDrawable(null);
     }
 
     @Override
@@ -183,7 +165,7 @@ public class SlideBackLayout extends SlidingPaneLayout {
 
     private boolean isInControlTime = true;
     private boolean isFirstDelayed = true;
-
+    private PopupWindow mPopupWindow;
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
 
@@ -193,6 +175,21 @@ public class SlideBackLayout extends SlidingPaneLayout {
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 if (displayView == null) {
+//                    CustomApplication customApplication = ((CustomApplication) getContext().getApplicationContext());
+//                    Activity lastActivity = customApplication.getActivityLifecycleHelper().getPreActivity();
+//                    ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
+//                    View content = contentView.getChildAt(0);
+//                    contentView.removeView(content);
+//
+//                    displayView = new ChangeableWidthFrameLayout(getContext());
+//                    displayView.addView(content);
+
+//                    mPopupWindow.showAtLocation(getChildAt(0), Gravity.LEFT, 0, 0);
+                }
+
+                if(mPopupWindow == null) {
+//                    mTextView = new TextView(getContext());
+//                    mTextView.setText("测试");
                     CustomApplication customApplication = ((CustomApplication) getContext().getApplicationContext());
                     Activity lastActivity = customApplication.getActivityLifecycleHelper().getPreActivity();
                     ViewGroup contentView = (ViewGroup) lastActivity.findViewById(android.R.id.content);
@@ -200,54 +197,21 @@ public class SlideBackLayout extends SlidingPaneLayout {
                     contentView.removeView(content);
 
                     displayView = new ChangeableWidthFrameLayout(getContext());
-//                    displayView.setWidth(1);
-//                    displayView.setVisibility(View.INVISIBLE);
                     displayView.addView(content);
+                    mPopupWindow = new PopupWindow(displayView, LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, false);
+                }
 
-                    WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
-                    layoutParams.format = PixelFormat.RGBA_8888;
-                    layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT;
-                    layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
-                    layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
-                    layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-                    layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION;
-                    ((Activity)getContext()).getWindowManager().addView(displayView, layoutParams);
-
-//                    final int width = getResources().getDisplayMetrics().widthPixels;
-//                    displayView.getChildAt(0).setX(- width / 3);
-//                    setParallaxDistance(100);
-//                    final int width = getResources().getDisplayMetrics().widthPixels;
-//                    displayView.getChildAt(0).setX(1 - width);
+                if(!mPopupWindow.isShowing()) {
+                    mPopupWindow.showAtLocation(getChildAt(0), Gravity.LEFT, 0, 0);
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
                 displayView.setWidth(getChildAt(1).getLeft());
-//                if(isInControlTime) {
-//                    if(isFirstDelayed) {
-//                        isFirstDelayed = false;
-//                        postDelayed(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                isInControlTime = false;
-//                                isFirstDelayed = true;
-//                            }
-//                        }, 60);
-//                    }
-//                    return true;
-//                }
-//
-//                WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
-//                layoutParams.format = PixelFormat.RGBA_8888;
-//                layoutParams.gravity = Gravity.LEFT | Gravity.TOP;
-//                layoutParams.width = getChildAt(1).getLeft();
-//                layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
-//                layoutParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-//                layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION;
-//                ((Activity)getContext()).getWindowManager().updateViewLayout(displayView, layoutParams);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 isInControlTime = true;
+                mPopupWindow = null;
                 break;
             default:break;
         }
@@ -277,24 +241,6 @@ public class SlideBackLayout extends SlidingPaneLayout {
         View content = getChildAt(1);
         int left = content.getLeft();
         return x >= left && x <= mMarginThreshold + left;
-    }
-
-    @Override
-    protected void dispatchDraw(Canvas canvas) {
-        super.dispatchDraw(canvas);
-//        drawShadow(canvas);
-    }
-
-    public void drawShadow(Canvas canvas) {
-        final int left = getChildAt(1).getLeft();
-        final int mShadowWidth = this.mShadowWidth; //px
-
-        if (mShadowDrawable == null) {
-            int colors[] = {0x00000000, 0x17000000, 0x43000000};//分别为开始颜色，中间夜色，结束颜色
-            mShadowDrawable = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors);
-        }
-        mShadowDrawable.setBounds(left - mShadowWidth, 0, left, getHeight());
-        mShadowDrawable.draw(canvas);
     }
 
     private static class ChangeableWidthFrameLayout extends FrameLayout {

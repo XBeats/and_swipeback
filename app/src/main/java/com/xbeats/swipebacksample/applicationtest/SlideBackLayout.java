@@ -126,7 +126,7 @@ public class SlideBackLayout extends SlidingPaneLayout {
     private static View getLastActivityContentView(Context context) {
         if(context.getApplicationContext() instanceof CustomApplication) {
             CustomApplication customApplication = ((CustomApplication)context.getApplicationContext());
-            Activity lastActivity = customApplication.getActivityLifecycleHelper().getLastActivity();
+            Activity lastActivity = customApplication.getActivityLifecycleHelper().getPreActivity();
             View contentView;
             contentView = lastActivity.findViewById(android.R.id.content);
             return contentView;

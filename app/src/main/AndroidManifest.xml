@@ -47,6 +47,15 @@
         <activity
             android:name="com.xbeats.swipebacksample.popwindow.PopupWindowActivity"
             android:label="SlideBackActivity"/>
+        <activity
+            android:name="com.xbeats.swipebacksample.dispatchactivity.DispatchManagerActivity"
+            android:label="SlideBackActivity"/>
+        <activity
+            android:name="com.xbeats.swipebacksample.multislide.MultiSlideActivity"
+            android:label="SlideBackActivity"/>
+        <activity
+            android:name="com.xbeats.swipebacksample.bitmaptest.BitmapActivity"
+            android:label="SlideBackActivity"/>
     </application>
 
 </manifest>

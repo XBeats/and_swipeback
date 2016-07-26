@@ -7,9 +7,12 @@ import android.os.Bundle;
 import android.view.View;
 
 import com.xbeats.swipebacksample.applicationtest.ApplicationTestActivity;
+import com.xbeats.swipebacksample.bitmaptest.BitmapActivity;
 import com.xbeats.swipebacksample.common.CommonActivity;
 import com.xbeats.swipebacksample.copylastactivityview.CopyLastViewActivity;
+import com.xbeats.swipebacksample.dispatchactivity.DispatchManagerActivity;
 import com.xbeats.swipebacksample.flingback.FlingBackActivity;
+import com.xbeats.swipebacksample.multislide.MultiSlideActivity;
 import com.xbeats.swipebacksample.noslide.NoSlideActivity;
 import com.xbeats.swipebacksample.popwindow.PopupWindowActivity;
 import com.xbeats.swipebacksample.slideback.NextActivity;
@@ -42,6 +45,6 @@ public class MainActivity extends BaseActivity {
     }
 
     public void onApplication(View v) {
-        startActivity(new Intent(this, PopupWindowActivity.class));
+        startActivity(new Intent(this, DispatchManagerActivity.class));
     }
 }

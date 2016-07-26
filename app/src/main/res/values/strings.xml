@@ -6,4 +6,5 @@
     <string name="title_activity_next">NextActivity</string>
     <string name="title_activity_common">CommonActivity</string>
     <string name="title_activity_no_slide">NoSlideActivity</string>
+    <string name="desc_slide_back">滑动返回</string>
 </resources>

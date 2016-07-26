@@ -11,28 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:onClick="nextPage"
-        android:text="Next下一页" />
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:onClick="nextPageUnSlide"
-        android:text="UnSlide下一页" />
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:onClick="nextCommonPage"
-        android:text="Common下一页" />
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
         android:onClick="onApplication"
-        android:text="application测试" />
+        android:text="@string/desc_slide_back" />
 
 </LinearLayout>

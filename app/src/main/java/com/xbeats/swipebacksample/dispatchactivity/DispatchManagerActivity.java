@@ -3,13 +3,11 @@ package com.xbeats.swipebacksample.dispatchactivity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.xbeats.swipebacksample.R;
-import com.xbeats.swipebacksample.applicationtest.CustomApplication;
 
 import java.util.Random;
 
@@ -47,23 +45,5 @@ public class DispatchManagerActivity extends BaseActivity{
     public void nextPage(View v) {
         startActivity(new Intent(this, DispatchManagerActivity.class));
         Page ++;
-    }
-
-    @Override
-    protected void onStop() {
-        Log.d(TAG, "onStop");
-        super.onStop();
-    }
-
-    @Override
-    protected void onRestart() {
-        super.onRestart();
-        Log.d(TAG, "onRestart");
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Log.d(TAG, "onStart");
     }
 }

@@ -1,4 +1,4 @@
-package com.xbeats.swipebacksample.applicationtest;
+package com.xbeats.swipebacksample.common;
 
 import android.app.Activity;
 import android.app.Application;

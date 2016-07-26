@@ -24,7 +24,7 @@ import android.view.animation.Interpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 
-import com.xbeats.swipebacksample.applicationtest.CustomApplication;
+import com.xbeats.swipebacksample.common.CustomApplication;
 
 
 /**
@@ -160,8 +160,10 @@ public class BaseActivity extends AppCompatActivity {
 
                     if(contentView.getChildCount() >= 3) {
                         View curView = contentView.getChildAt(2);
-                        int color = getWindowBackgroundColor();
-                        curView.setBackgroundColor(color);
+                        if(curView.getBackground() == null) {
+                            int color = getWindowBackgroundColor();
+                            curView.setBackgroundColor(color);
+                        }
                     }
                     break;
                 case MSG_ACTION_MOVE:

@@ -3,6 +3,7 @@ package com.xbeats.swipebacksample.dispatchactivity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -14,8 +15,9 @@ import java.util.Random;
 /**
  * Created by fhf11991 on 2016/7/25.
  */
-
 public class DispatchManagerActivity extends BaseActivity{
+
+    private final String TAG = "DispatchManagerActivity";
 
     private static int Page = 1;
     private int page;
@@ -41,13 +43,25 @@ public class DispatchManagerActivity extends BaseActivity{
         textView.setText("当前页" + page);
     }
 
-    @Override
-    public void finish() {
-        super.finish();
-        overridePendingTransition(0, 0);
-    }
-
     public void nextPage(View v) {
         startActivity(new Intent(this, DispatchManagerActivity.class));
+    }
+
+    @Override
+    protected void onStop() {
+        Log.d(TAG, "onStop");
+        super.onStop();
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        Log.d(TAG, "onRestart");
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d(TAG, "onStart");
     }
 }

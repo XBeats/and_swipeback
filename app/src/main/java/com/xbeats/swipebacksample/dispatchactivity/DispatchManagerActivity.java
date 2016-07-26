@@ -9,6 +9,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.xbeats.swipebacksample.R;
+import com.xbeats.swipebacksample.applicationtest.CustomApplication;
 
 import java.util.Random;
 
@@ -45,6 +46,7 @@ public class DispatchManagerActivity extends BaseActivity{
 
     public void nextPage(View v) {
         startActivity(new Intent(this, DispatchManagerActivity.class));
+        Page ++;
     }
 
     @Override

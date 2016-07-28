@@ -42,7 +42,7 @@ public class BaseActivity extends AppCompatActivity {
     private float mDistanceX;  //px 当前滑动距离 （正数或0）
 
     private FrameLayout mContentView;
-    public FrameLayout getContentView() {
+    private FrameLayout getContentView() {
         if(mContentView == null) {
             mContentView = (FrameLayout) findViewById(Window.ID_ANDROID_CONTENT);
         }

@@ -1,6 +1,7 @@
 package com.xbeats.swipebacksample.dispatchactivity;
 
 import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.app.Activity;
@@ -13,6 +14,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.Nullable;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -30,20 +32,183 @@ import com.xbeats.swipebacksample.common.CustomApplication;
 /**
  * Created by fhf11991 on 2016/7/25.
  */
-
 public class BaseActivity extends AppCompatActivity {
+    private static final int MSG_ACTION_DOWN = 1; //点击事件
+    private static final int MSG_ACTION_MOVE = 2; //滑动事件
+    private static final int MSG_ACTION_UP = 3;  //点击结束
+    private static final int MSG_SLIDE_CANCEL = 4; //开始滑动，不返回前一个页面
+    private static final int MSG_SLIDE_CANCELED = 5;  //结束滑动，不返回前一个页面
+    private static final int MSG_SLIDE_PROCEED = 6; //开始滑动，返回前一个页面
+    private static final int MSG_SLIDE_FINISHED = 7;//结束滑动，返回前一个页面
+
+    private static final int SHADOW_WIDTH = 50; //px 阴影宽度
+    private static final int MARGIN_THRESHOLD = 60;  //px 拦截手势区间 0~60
 
     private GestureDetector mGestureDetector;
+    private FrameLayout mContentView;
 
-    private final int mMarginThreshold = 60;  //px 拦截手势区间 0~60
-    private final int mShadowWidth = 50; //px 阴影宽度
     private boolean mIsSliding; //是否正在滑动
     private boolean mIsSlideAnimPlaying; //滑动动画展示过程中
     private float mDistanceX;  //px 当前滑动距离 （正数或0）
 
-    private FrameLayout mContentView;
-    private FrameLayout getContentView() {
-        if(mContentView == null) {
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        mGestureDetector = new GestureDetector(this, new SlideGestureListener());
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (!supportSlideBack()) {
+            return super.dispatchTouchEvent(ev);
+        }
+
+        if (mIsSlideAnimPlaying) {
+            return true;
+        }
+
+        switch (ev.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                final int x = (int) (ev.getX());
+                boolean inThresholdArea = x >= 0 && x < MARGIN_THRESHOLD;
+                if (inThresholdArea && !mIsSliding) {
+                    mIsSliding = true;
+                    return mGestureDetector.onTouchEvent(ev);
+                }
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                if (mIsSliding) {
+                    return mGestureDetector.onTouchEvent(ev);
+                }
+                break;
+
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                if (mIsSliding) {
+                    mIsSliding = false;
+                    mActionHandler.sendEmptyMessage(MSG_ACTION_UP);
+                }
+                break;
+
+            default:
+                mIsSliding = false;
+                break;
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    private class SlideGestureListener extends GestureDetector.SimpleOnGestureListener {
+
+        @Override
+        public boolean onDown(MotionEvent e) {
+            mActionHandler.sendEmptyMessage(MSG_ACTION_DOWN);
+            return true;
+        }
+
+        @Override
+        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+            mDistanceX = mDistanceX - distanceX;
+            if (mDistanceX < 0) {
+                mDistanceX = 0;
+            }
+            mActionHandler.sendEmptyMessage(MSG_ACTION_MOVE);
+            return true;
+        }
+    }
+
+    private Handler mActionHandler = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            final int width = getResources().getDisplayMetrics().widthPixels;
+            final FrameLayout contentView = getContentView();
+
+            switch (msg.what) {
+                case MSG_ACTION_DOWN:
+                    CustomApplication application = (CustomApplication) getApplication();
+                    Activity previousActivity = application.getActivityLifecycleHelper().getPreActivity();
+                    if (previousActivity == null) {
+                        return;
+                    }
+
+                    // hide input method
+                    //关闭输入法
+                    InputMethodManager inputMethod = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    View view = getCurrentFocus();
+                    if (view != null) {
+                        inputMethod.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                    }
+
+                    // add shadow view on the left of content view
+                    ShadowView shadowView = new ShadowView(BaseActivity.this);
+                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                            SHADOW_WIDTH, FrameLayout.LayoutParams.MATCH_PARENT);
+                    contentView.addView(shadowView, 0, layoutParams);
+
+                    // add content view
+                    ViewGroup previousActivityContainer = (ViewGroup) previousActivity.findViewById(android.R.id.content);
+                    View previewActivityContentView = previousActivityContainer.getChildAt(0);
+                    previousActivityContainer.removeView(previewActivityContentView);
+                    contentView.addView(previewActivityContentView, 0);
+
+                    if (contentView.getChildCount() >= 3) {
+                        View curView = contentView.getChildAt(2);
+                        if (curView.getBackground() == null) {
+                            int color = getWindowBackgroundColor();
+                            curView.setBackgroundColor(color);
+                        }
+                    }
+                    break;
+
+                case MSG_ACTION_MOVE:
+                    onSliding();
+                    break;
+
+                case MSG_ACTION_UP:
+                    if (mDistanceX == 0) {
+                        resetPreviewView(0);
+                    } else if (mDistanceX > width / 4) {
+                        mActionHandler.sendEmptyMessage(MSG_SLIDE_PROCEED);
+                    } else {
+                        mActionHandler.sendEmptyMessage(MSG_SLIDE_CANCEL);
+                    }
+                    break;
+
+                case MSG_SLIDE_CANCEL:
+                    startSlideAnim(true);
+                    break;
+
+                case MSG_SLIDE_CANCELED:
+                    mDistanceX = 0;
+                    mIsSliding = false;
+                    contentView.removeViewAt(1);
+                    resetPreviewView(0);
+                    break;
+
+                case MSG_SLIDE_PROCEED:
+                    startSlideAnim(false);
+                    break;
+
+                case MSG_SLIDE_FINISHED:
+                    View previousView = contentView.getChildAt(0);
+                    PreviousPageView previousPageView = new PreviousPageView(BaseActivity.this);
+                    contentView.addView(previousPageView, 0);
+                    previousPageView.cacheView(previousView);
+                    resetPreviewView(1);
+                    finish();
+                    overridePendingTransition(0, 0);
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    };
+
+    protected FrameLayout getContentView() {
+        if (mContentView == null) {
             mContentView = (FrameLayout) findViewById(Window.ID_ANDROID_CONTENT);
         }
         return mContentView;
@@ -52,157 +217,14 @@ public class BaseActivity extends AppCompatActivity {
     private int getWindowBackgroundColor() {
         TypedArray array = null;
         try {
-            array = getTheme().obtainStyledAttributes(new int[]{
-                    android.R.attr.windowBackground,
-            });
-            return array.getColor(0, getResources().getColor(android.R.color.transparent));
-        }finally {
+            array = getTheme().obtainStyledAttributes(new int[]{android.R.attr.windowBackground});
+            return array.getColor(0, ContextCompat.getColor(this, android.R.color.transparent));
+        } finally {
             if (array != null) {
                 array.recycle();
             }
         }
     }
-
-    @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        mGestureDetector = new GestureDetector(this, new CustomGestureListener());
-    }
-
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-
-        if(!isSupportSlideBack())return super.dispatchTouchEvent(ev);
-
-        if(mIsSlideAnimPlaying)return true;
-
-        switch (ev.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                final int x = (int) (ev.getX());
-                boolean isSlideAction = x >= 0 && x < mMarginThreshold;
-                if(isSlideAction && !mIsSliding) {
-                    mIsSliding = true;
-                    return mGestureDetector.onTouchEvent(ev);
-                }
-                break;
-            case MotionEvent.ACTION_MOVE:
-                if(mIsSliding) {
-                    return mGestureDetector.onTouchEvent(ev);
-                }
-                break;
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_CANCEL:
-                if(mIsSliding) {
-                    mIsSliding = false;
-                    handler.sendEmptyMessage(MSG_ACTION_UP);
-                }
-                break;
-            default:
-                mIsSliding = false;
-                break;
-        }
-        return super.dispatchTouchEvent(ev);
-    }
-
-    private class CustomGestureListener extends GestureDetector.SimpleOnGestureListener {
-
-        @Override
-        public boolean onDown(MotionEvent e) {
-            handler.sendEmptyMessage(MSG_ACTION_DOWN);
-            return true;
-        }
-
-        @Override
-        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            mDistanceX = mDistanceX + (-distanceX);
-            if(mDistanceX < 0)mDistanceX = 0;
-            handler.sendEmptyMessage(MSG_ACTION_MOVE);
-            return true;
-        }
-    }
-
-    private static final int MSG_ACTION_DOWN = 1; //点击事件
-    private static final int MSG_ACTION_MOVE = 2; //滑动事件
-    private static final int MSG_ACTION_UP = 3;  //点击结束
-    private static final int MSG_TO_SLIDE_CLOSE = 4; //开始滑动，不返回上一页面
-    private static final int MSG_SLIDE_CLOSED = 5;  //结束滑动，不返回上一页面
-    private static final int MSG_TO_SLIDE_BACK = 6; //开始滑动，返回上一页面
-    private static final int MSG_BACK = 7;//结束滑动，返回上一页面
-
-    private Handler handler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            final int width = getResources().getDisplayMetrics().widthPixels;
-            final FrameLayout contentView = getContentView();
-            switch (msg.what) {
-                case MSG_ACTION_DOWN:
-                    CustomApplication application = (CustomApplication) getApplication();
-                    Activity preActivity = application.getActivityLifecycleHelper().getPreActivity();
-                    if(preActivity == null)return;
-
-                    //关闭输入法
-                    InputMethodManager inputMethod = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    View view = getCurrentFocus();
-                    if (view != null) {
-                        inputMethod.hideSoftInputFromWindow(view.getWindowToken(), 0);
-                    }
-
-                    ShadowView shadowView = new ShadowView(BaseActivity.this);
-                    FrameLayout.LayoutParams layoutParams =
-                            new FrameLayout.LayoutParams(mShadowWidth, FrameLayout.LayoutParams.MATCH_PARENT);
-                    contentView.addView(shadowView, 0, layoutParams);
-
-                    ViewGroup preContentView = (ViewGroup) preActivity.findViewById(android.R.id.content);
-                    View addPreView = preContentView.getChildAt(0);
-                    preContentView.removeView(addPreView);
-                    contentView.addView(addPreView, 0);
-
-                    if(contentView.getChildCount() >= 3) {
-                        View curView = contentView.getChildAt(2);
-                        if(curView.getBackground() == null) {
-                            int color = getWindowBackgroundColor();
-                            curView.setBackgroundColor(color);
-                        }
-                    }
-                    break;
-                case MSG_ACTION_MOVE:
-                    onSliding();
-                    break;
-                case MSG_ACTION_UP:
-                    if(mDistanceX == 0) {
-                        resetPreView(0);
-                    }else if(mDistanceX > width / 4) {
-                        handler.sendEmptyMessage(MSG_TO_SLIDE_BACK);
-                    } else {
-                        handler.sendEmptyMessage(MSG_TO_SLIDE_CLOSE);
-                    }
-                    break;
-                case MSG_TO_SLIDE_CLOSE:
-                    startSlideAnim(true);
-                    break;
-                case MSG_SLIDE_CLOSED:
-                    mDistanceX = 0;
-                    mIsSliding = false;
-                    contentView.removeViewAt(1);
-                    resetPreView(0);
-                    break;
-                case MSG_TO_SLIDE_BACK:
-                    startSlideAnim(false);
-                    break;
-                case MSG_BACK:
-                    final View preView = contentView.getChildAt(0);
-                    DisplayView customSurfaceView = new DisplayView(BaseActivity.this);
-                    contentView.addView(customSurfaceView, 0);
-                    customSurfaceView.setCopyView(preView);
-                    resetPreView(1);
-                    finish();
-                    overridePendingTransition(0, 0);
-                    break;
-                default:break;
-            }
-        }
-    };
 
     /**
      * 手动处理滑动事件
@@ -210,141 +232,138 @@ public class BaseActivity extends AppCompatActivity {
     private synchronized void onSliding() {
         final int width = getResources().getDisplayMetrics().widthPixels;
         FrameLayout contentView = getContentView();
-        View preView = contentView.getChildAt(0);
+        View previewActivityContentView = contentView.getChildAt(0);
         View shadowView = contentView.getChildAt(1);
-        View curView = contentView.getChildAt(2);
-        if(preView == null || curView == null || shadowView == null)return;
-        preView.setX(-width/3 + mDistanceX/3);
-        shadowView.setX(mDistanceX - mShadowWidth);
-        curView.setX(mDistanceX);
+        View currentActivityContentView = contentView.getChildAt(2);
+
+        if (previewActivityContentView == null || currentActivityContentView == null || shadowView == null){
+            return;
+        }
+
+        previewActivityContentView.setX(-width / 3 + mDistanceX / 3);
+        shadowView.setX(mDistanceX - SHADOW_WIDTH);
+        currentActivityContentView.setX(mDistanceX);
     }
 
     /**
      * 重置上个activity的view状态
-     * @param preViewIndex
+     *
+     * @param viewIndex
      */
-    private void resetPreView(int preViewIndex) {
+    private void resetPreviewView(int viewIndex) {
         CustomApplication application = (CustomApplication) getApplication();
         Activity preActivity = application.getActivityLifecycleHelper().getPreActivity();
-        if(preActivity == null)return;
-        final FrameLayout contentView = getContentView();
-        final View preView = contentView.getChildAt(preViewIndex);
-        contentView.removeView(preView);
-        ViewGroup preContentView = (ViewGroup) preActivity.findViewById(android.R.id.content);
-        preContentView.addView(preView);
+        if (preActivity == null) {
+            return;
+        }
+        FrameLayout contentView = getContentView();
+        View view = contentView.getChildAt(viewIndex);
+        contentView.removeView(view);
+        ViewGroup previewContentView = (ViewGroup) preActivity.findViewById(android.R.id.content);
+        previewContentView.addView(view);
     }
 
     /**
      * 开始自动滑动动画
-     * @param isBack 是不是要返回（true则不关闭当前页面）
+     *
+     * @param slideCanceled 是不是要返回（true则不关闭当前页面）
      */
-    private void startSlideAnim(final boolean isBack) {
+    private void startSlideAnim(final boolean slideCanceled) {
         final FrameLayout contentView = getContentView();
-        final View preView = contentView.getChildAt(0);
+        final View previewView = contentView.getChildAt(0);
         final View shadowView = contentView.getChildAt(1);
-        final View curView = contentView.getChildAt(2);
-        if(preView == null || curView == null)return;
+        final View currentView = contentView.getChildAt(2);
 
-        final int width = getResources().getDisplayMetrics().widthPixels;
-        final int ANIMATION_DURATION = isBack ? 150 : 300;
+        if (previewView == null || currentView == null) {
+            return;
+        }
 
+        int width = getResources().getDisplayMetrics().widthPixels;
+        Interpolator interpolator = new DecelerateInterpolator(2f);
+
+        // preview activity's animation
+        ObjectAnimator previewViewAnim = new ObjectAnimator();
+        previewViewAnim.setInterpolator(interpolator);
+        previewViewAnim.setProperty(View.TRANSLATION_X);
         float preViewStart = mDistanceX / 3 - width / 3;
-        float preViewStop = isBack ? -width / 3 : 0;
+        float preViewStop = slideCanceled ? - width / 3 : 0;
+        previewViewAnim.setFloatValues(preViewStart, preViewStop);
+        previewViewAnim.setTarget(previewView);
 
-        float shadowViewStart = mDistanceX - mShadowWidth;
-        float shadowViewEnd = isBack ? mShadowWidth : width + mShadowWidth;
-
-        float curViewStart = mDistanceX;
-        float curViewStop = isBack ? 0 : width;
-
-        Interpolator sExpandInterpolator = new DecelerateInterpolator(2f);
-        AnimatorSet tranAnimSet = new AnimatorSet();
-        tranAnimSet.setDuration(ANIMATION_DURATION);
-
-        ObjectAnimator preViewAnim = new ObjectAnimator();
-        preViewAnim.setInterpolator(sExpandInterpolator);
-        preViewAnim.setProperty(View.TRANSLATION_X);
-        preViewAnim.setFloatValues(preViewStart, preViewStop);
-        preViewAnim.setTarget(preView);
-
+        // shadow view's animation
         ObjectAnimator shadowViewAnim = new ObjectAnimator();
-        shadowViewAnim.setInterpolator(sExpandInterpolator);
+        shadowViewAnim.setInterpolator(interpolator);
         shadowViewAnim.setProperty(View.TRANSLATION_X);
+        float shadowViewStart = mDistanceX - SHADOW_WIDTH;
+        float shadowViewEnd = slideCanceled ? SHADOW_WIDTH : width + SHADOW_WIDTH;
         shadowViewAnim.setFloatValues(shadowViewStart, shadowViewEnd);
         shadowViewAnim.setTarget(shadowView);
 
-        ObjectAnimator curViewAnim = new ObjectAnimator();
-        curViewAnim.setInterpolator(sExpandInterpolator);
-        curViewAnim.setProperty(View.TRANSLATION_X);
-        curViewAnim.setFloatValues(curViewStart, curViewStop);
-        curViewAnim.setTarget(curView);
+        // current view's animation
+        ObjectAnimator currentViewAnim = new ObjectAnimator();
+        currentViewAnim.setInterpolator(interpolator);
+        currentViewAnim.setProperty(View.TRANSLATION_X);
+        float curViewStart = mDistanceX;
+        float curViewStop = slideCanceled ? 0 : width;
+        currentViewAnim.setFloatValues(curViewStart, curViewStop);
+        currentViewAnim.setTarget(currentView);
 
-        tranAnimSet.playTogether(preViewAnim, shadowViewAnim, curViewAnim);
-        tranAnimSet.addListener(new Animator.AnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animation) {
-
-            }
+        // play animation together
+        AnimatorSet animatorSet = new AnimatorSet();
+        animatorSet.setDuration(slideCanceled ? 150 : 300);
+        animatorSet.playTogether(previewViewAnim, shadowViewAnim, currentViewAnim);
+        animatorSet.addListener(new AnimatorListenerAdapter() {
 
             @Override
             public void onAnimationEnd(Animator animation) {
                 mIsSlideAnimPlaying = false;
-                if(isBack) {
-                    preView.setX(0);
-                    shadowView.setX(-mShadowWidth);
-                    curView.setX(0);
-                    handler.sendEmptyMessage(MSG_SLIDE_CLOSED);
+                if (slideCanceled) {
+                    previewView.setX(0);
+                    shadowView.setX(-SHADOW_WIDTH);
+                    currentView.setX(0);
+                    mActionHandler.sendEmptyMessage(MSG_SLIDE_CANCELED);
                 } else {
-                    handler.sendEmptyMessage(MSG_BACK);
+                    mActionHandler.sendEmptyMessage(MSG_SLIDE_FINISHED);
                 }
-
-            }
-
-            @Override
-            public void onAnimationCancel(Animator animation) {
-
-            }
-
-            @Override
-            public void onAnimationRepeat(Animator animation) {
-
             }
         });
-        tranAnimSet.start();
+        animatorSet.start();
         mIsSlideAnimPlaying = true;
     }
 
     /**
      * 是否支持滑动返回
+     *
      * @return
      */
-    protected boolean isSupportSlideBack() {
+    protected boolean supportSlideBack() {
         return true;
     }
 
-    private static class DisplayView extends View{
-
+    private class PreviousPageView extends View {
         private View mView;
-        public DisplayView(Context context) {
+
+        public PreviousPageView(Context context) {
             super(context);
         }
 
-        public void setCopyView(View view) {
+        public void cacheView(View view) {
             mView = view;
             invalidate();
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
-            if(mView != null) {
+            if (mView != null) {
                 mView.draw(canvas);
                 mView = null;
             }
         }
     }
 
-    private static class ShadowView extends View {
-        private Drawable mShadowDrawable;
+    private class ShadowView extends View {
+        private Drawable mDrawable;
+
         public ShadowView(Context context) {
             super(context);
         }
@@ -352,16 +371,12 @@ public class BaseActivity extends AppCompatActivity {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            drawShadow(canvas);
-        }
-
-        public void drawShadow(Canvas canvas) {
-            if(mShadowDrawable == null) {
+            if (mDrawable == null) {
                 int colors[] = {0x00000000, 0x17000000, 0x43000000};//分别为开始颜色，中间夜色，结束颜色
-                mShadowDrawable = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors);
+                mDrawable = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors);
             }
-            mShadowDrawable.setBounds(0, 0, getMeasuredWidth(), getMeasuredHeight());
-            mShadowDrawable.draw(canvas);
+            mDrawable.setBounds(0, 0, getMeasuredWidth(), getMeasuredHeight());
+            mDrawable.draw(canvas);
         }
     }
 }

@@ -168,6 +168,7 @@ public class BaseActivity extends AppCompatActivity {
 
                 case MSG_ACTION_UP:
                     if (mDistanceX == 0) {
+                        contentView.removeViewAt(1);
                         resetPreviewView(0);
                     } else if (mDistanceX > width / 4) {
                         mActionHandler.sendEmptyMessage(MSG_SLIDE_PROCEED);

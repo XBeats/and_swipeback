@@ -59,15 +59,16 @@ public class BaseActivity extends AppCompatActivity {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (!supportSlideBack()) {
+        if (!supportSlideBack() || mGestureDetector == null) {
             return super.dispatchTouchEvent(ev);
         }
 
-        if (mIsSlideAnimPlaying) {
+        final int actionIndex = ev.getActionIndex();
+        final int action = ev.getAction() & MotionEvent.ACTION_MASK;
+        if (mIsSlideAnimPlaying || actionIndex != 0) {
             return true;
         }
-
-        switch (ev.getAction()) {
+        switch (action) {
             case MotionEvent.ACTION_DOWN:
                 final int x = (int) (ev.getX());
                 boolean inThresholdArea = x >= 0 && x < MARGIN_THRESHOLD;
@@ -90,7 +91,14 @@ public class BaseActivity extends AppCompatActivity {
                     mActionHandler.sendEmptyMessage(MSG_ACTION_UP);
                 }
                 break;
-
+            case MotionEvent.ACTION_POINTER_DOWN:
+                return true;
+            case MotionEvent.ACTION_POINTER_UP:
+                if (mIsSliding){
+                    mIsSliding = false;
+                    mActionHandler.sendEmptyMessage(MSG_ACTION_UP);
+                }
+                break;
             default:
                 mIsSliding = false;
                 break;
@@ -168,8 +176,10 @@ public class BaseActivity extends AppCompatActivity {
 
                 case MSG_ACTION_UP:
                     if (mDistanceX == 0) {
-                        contentView.removeViewAt(1);
-                        resetPreviewView(0);
+                        if(contentView.getChildCount() >= 3) {
+                            contentView.removeViewAt(1);
+                            resetPreviewView(0);
+                        }
                     } else if (mDistanceX > width / 4) {
                         mActionHandler.sendEmptyMessage(MSG_SLIDE_PROCEED);
                     } else {

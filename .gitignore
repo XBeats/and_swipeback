@@ -1,14 +1,10 @@
 *.iml
 .gradle
-
 /local.properties
-
 /.idea/workspace.xml
-
 /.idea
 /build
 /captures
-/gradle
 /gradle
 gradlew
 gradlew.bat

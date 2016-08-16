@@ -4,10 +4,11 @@ SwipeBack
 Features
 --------
 
-- 无需设置theme背景透明等属性,与 `<item name="android:windowIsTranslucent">true</item>` 没有任何关系 
+- 和Activity的theme并无关系
 - 不影响activity的生命周期
-- 只需继承BaseActivity，即可实现滑动返回      
-- 对外只暴露了一个api  `isSupportSwipeBack`  ,简单实用   
+- 只需继承BaseActivity  
+- `isSupportSwipeBack` 唯一API方法,简单实用   
+- 无需设置 `<item name="android:windowIsTranslucent">true</item>`
 
 Usage
 --------

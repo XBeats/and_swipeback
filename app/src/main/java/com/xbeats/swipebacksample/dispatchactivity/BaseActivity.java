@@ -59,13 +59,13 @@ public class BaseActivity extends AppCompatActivity {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (!supportSlideBack() || mGestureDetector == null) {
+        final int action = ev.getAction() & MotionEvent.ACTION_MASK;
+        final int actionIndex = ev.getActionIndex();
+        if (!supportSlideBack() || mGestureDetector == null || actionIndex != 0) {
             return super.dispatchTouchEvent(ev);
         }
 
-        final int actionIndex = ev.getActionIndex();
-        final int action = ev.getAction() & MotionEvent.ACTION_MASK;
-        if (mIsSlideAnimPlaying || actionIndex != 0) {
+        if (mIsSlideAnimPlaying) {
             return true;
         }
         switch (action) {

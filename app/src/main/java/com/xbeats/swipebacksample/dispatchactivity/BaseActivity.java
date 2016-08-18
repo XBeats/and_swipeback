@@ -10,13 +10,10 @@ import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,59 +41,72 @@ public class BaseActivity extends AppCompatActivity {
     private static final int SHADOW_WIDTH = 50; //px 阴影宽度
     private static final int MARGIN_THRESHOLD = 60;  //px 拦截手势区间 0~60
 
-    private GestureDetector mGestureDetector;
     private FrameLayout mContentView;
 
     private boolean mIsSliding; //是否正在滑动
     private boolean mIsSlideAnimPlaying; //滑动动画展示过程中
     private float mDistanceX;  //px 当前滑动距离 （正数或0）
-
-    @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        mGestureDetector = new GestureDetector(this, new SlideGestureListener());
-    }
+    private float lastPointX;  //记录手势在屏幕上的X轴坐标
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        final int action = ev.getAction() & MotionEvent.ACTION_MASK;
-        final int actionIndex = ev.getActionIndex();
-        if (!supportSlideBack() || mGestureDetector == null || actionIndex != 0) {
+        if(!supportSlideBack()) { //不支持滑动返回，则手势事件交给View处理
             return super.dispatchTouchEvent(ev);
         }
 
-        if (mIsSlideAnimPlaying) {
+        if(mIsSlideAnimPlaying) {  //正在滑动动画播放中，直接消费手势事件
             return true;
         }
+
+        final int action = ev.getAction() & MotionEvent.ACTION_MASK;
+        final int actionIndex = ev.getActionIndex();
+
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                final int x = (int) (ev.getX());
-                boolean inThresholdArea = x >= 0 && x < MARGIN_THRESHOLD;
-                if (inThresholdArea && !mIsSliding) {
+                lastPointX = ev.getRawX();
+                boolean inThresholdArea = lastPointX >= 0 && lastPointX <= MARGIN_THRESHOLD;
+
+                if(inThresholdArea && mIsSliding) {
+                    return true;
+                } else if(inThresholdArea && !mIsSliding) { //开始滑动
                     mIsSliding = true;
-                    return mGestureDetector.onTouchEvent(ev);
+                    mActionHandler.sendEmptyMessage(MSG_ACTION_DOWN);
+                    return true;
+                }
+                break;
+
+            case MotionEvent.ACTION_POINTER_DOWN:
+                if(mIsSliding) {  //有第二个手势事件加入，而且正在滑动事件中，则直接消费事件
+                    return true;
                 }
                 break;
 
             case MotionEvent.ACTION_MOVE:
-                if (mIsSliding) {
-                    return mGestureDetector.onTouchEvent(ev);
+                if (mIsSliding && actionIndex == 0) { //开始滑动
+                    final float curPointX = ev.getRawX();
+                    final float distanceX = curPointX - lastPointX;
+                    lastPointX = curPointX;
+
+                    mDistanceX = mDistanceX + distanceX;
+                    if (mDistanceX < 0) {
+                        mDistanceX = 0;
+                    }
+                    mActionHandler.sendEmptyMessage(MSG_ACTION_MOVE);
+                    return true;
+                } else if(mIsSliding && actionIndex != 0){
+                    return true;
                 }
                 break;
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                if (mIsSliding) {
-                    mIsSliding = false;
-                    mActionHandler.sendEmptyMessage(MSG_ACTION_UP);
-                }
-                break;
-            case MotionEvent.ACTION_POINTER_DOWN:
-                return true;
             case MotionEvent.ACTION_POINTER_UP:
-                if (mIsSliding){
+                if (mIsSliding && actionIndex == 0) { // 取消滑动 或 手势抬起 ，而且手势事件是第一手势，开始滑动动画
                     mIsSliding = false;
                     mActionHandler.sendEmptyMessage(MSG_ACTION_UP);
+                    return true;
+                } else if (mIsSliding && actionIndex != 0) {
+                    return true;
                 }
                 break;
             default:
@@ -104,25 +114,6 @@ public class BaseActivity extends AppCompatActivity {
                 break;
         }
         return super.dispatchTouchEvent(ev);
-    }
-
-    private class SlideGestureListener extends GestureDetector.SimpleOnGestureListener {
-
-        @Override
-        public boolean onDown(MotionEvent e) {
-            mActionHandler.sendEmptyMessage(MSG_ACTION_DOWN);
-            return true;
-        }
-
-        @Override
-        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            mDistanceX = mDistanceX - distanceX;
-            if (mDistanceX < 0) {
-                mDistanceX = 0;
-            }
-            mActionHandler.sendEmptyMessage(MSG_ACTION_MOVE);
-            return true;
-        }
     }
 
     private Handler mActionHandler = new Handler() {

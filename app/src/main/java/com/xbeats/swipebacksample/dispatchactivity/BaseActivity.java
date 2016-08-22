@@ -260,6 +260,7 @@ public class BaseActivity extends AppCompatActivity {
         }
         FrameLayout contentView = getContentView();
         View view = contentView.getChildAt(viewIndex);
+        view.setX(0);
         contentView.removeView(view);
         ViewGroup previewContentView = (ViewGroup) preActivity.findViewById(android.R.id.content);
         previewContentView.addView(view);

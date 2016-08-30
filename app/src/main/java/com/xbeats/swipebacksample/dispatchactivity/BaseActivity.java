@@ -10,6 +10,7 @@ import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.content.ContextCompat;
@@ -30,6 +31,8 @@ import com.xbeats.swipebacksample.common.CustomApplication;
  * Created by fhf11991 on 2016/7/25.
  */
 public class BaseActivity extends AppCompatActivity {
+    private static final String CURRENT_POINT_X = "currentPointX"; //点击事件
+
     private static final int MSG_ACTION_DOWN = 1; //点击事件
     private static final int MSG_ACTION_MOVE = 2; //滑动事件
     private static final int MSG_ACTION_UP = 3;  //点击结束
@@ -42,15 +45,17 @@ public class BaseActivity extends AppCompatActivity {
     private static final int MARGIN_THRESHOLD = 60;  //px 拦截手势区间 0~60
 
     private FrameLayout mContentView;
+    private View mPreviousActivityContentView;
+    private View mShadowView;
 
     private boolean mIsSliding; //是否正在滑动
     private boolean mIsSlideAnimPlaying; //滑动动画展示过程中
     private float mDistanceX;  //px 当前滑动距离 （正数或0）
-    private float lastPointX;  //记录手势在屏幕上的X轴坐标
+    private float mLastPointX;  //记录手势在屏幕上的X轴坐标
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        if(!supportSlideBack()) { //不支持滑动返回，则手势事件交给View处理
+        if(!supportSlideBack() || isFinishing()) { //不支持滑动返回，则手势事件交给View处理
             return super.dispatchTouchEvent(ev);
         }
 
@@ -63,8 +68,8 @@ public class BaseActivity extends AppCompatActivity {
 
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                lastPointX = ev.getRawX();
-                boolean inThresholdArea = lastPointX >= 0 && lastPointX <= MARGIN_THRESHOLD;
+                mLastPointX = ev.getRawX();
+                boolean inThresholdArea = mLastPointX >= 0 && mLastPointX <= MARGIN_THRESHOLD;
 
                 if(inThresholdArea && mIsSliding) {
                     return true;
@@ -83,15 +88,12 @@ public class BaseActivity extends AppCompatActivity {
 
             case MotionEvent.ACTION_MOVE:
                 if (mIsSliding && actionIndex == 0) { //开始滑动
-                    final float curPointX = ev.getRawX();
-                    final float distanceX = curPointX - lastPointX;
-                    lastPointX = curPointX;
-
-                    mDistanceX = mDistanceX + distanceX;
-                    if (mDistanceX < 0) {
-                        mDistanceX = 0;
-                    }
-                    mActionHandler.sendEmptyMessage(MSG_ACTION_MOVE);
+                    Message message = mActionHandler.obtainMessage();
+                    Bundle bundle = new Bundle();
+                    bundle.putFloat(CURRENT_POINT_X, ev.getRawX());
+                    message.what = MSG_ACTION_MOVE;
+                    message.setData(bundle);
+                    mActionHandler.sendMessage(message);
                     return true;
                 } else if(mIsSliding && actionIndex != 0){
                     return true;
@@ -126,34 +128,43 @@ public class BaseActivity extends AppCompatActivity {
 
             switch (msg.what) {
                 case MSG_ACTION_DOWN:
+                    // hide input method
+                    InputMethodManager inputMethod = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    View view = getCurrentFocus();
+                    if (view != null) {
+                        inputMethod.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                    }
+                    if (contentView.getChildCount() == 0) return;
+
                     CustomApplication application = (CustomApplication) getApplication();
                     Activity previousActivity = application.getActivityLifecycleHelper().getPreActivity();
                     if (previousActivity == null) {
                         return;
                     }
 
-                    // hide input method
-                    //关闭输入法
-                    InputMethodManager inputMethod = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    View view = getCurrentFocus();
-                    if (view != null) {
-                        inputMethod.hideSoftInputFromWindow(view.getWindowToken(), 0);
-                    }
-
-                    // add shadow view on the left of content view
-                    ShadowView shadowView = new ShadowView(BaseActivity.this);
-                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                            SHADOW_WIDTH, FrameLayout.LayoutParams.MATCH_PARENT);
-                    contentView.addView(shadowView, 0, layoutParams);
-
                     // add content view
                     ViewGroup previousActivityContainer = (ViewGroup) previousActivity.findViewById(android.R.id.content);
-                    View previewActivityContentView = previousActivityContainer.getChildAt(0);
-                    previousActivityContainer.removeView(previewActivityContentView);
-                    contentView.addView(previewActivityContentView, 0);
+                    if(previousActivityContainer == null || previousActivityContainer.getChildCount() == 0) {
+                        return;
+                    }
+
+                    View previousActivityContentView = previousActivityContainer.getChildAt(0);
+                    if(previousActivityContentView == null) {
+                        return;
+                    }
+                    mPreviousActivityContentView = previousActivityContentView;
+                    previousActivityContainer.removeView(previousActivityContentView);
+                    contentView.addView(previousActivityContentView, 0);
+
+                    // add shadow view on the left of content view
+                    mShadowView = new ShadowView(BaseActivity.this);
+                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                            SHADOW_WIDTH, FrameLayout.LayoutParams.MATCH_PARENT);
+                    mShadowView.setX(-SHADOW_WIDTH);
+                    contentView.addView(mShadowView, 1, layoutParams);
 
                     if (contentView.getChildCount() >= 3) {
-                        View curView = contentView.getChildAt(2);
+                        View curView = getDisplayView(contentView);
                         if (curView.getBackground() == null) {
                             int color = getWindowBackgroundColor();
                             curView.setBackgroundColor(color);
@@ -162,14 +173,15 @@ public class BaseActivity extends AppCompatActivity {
                     break;
 
                 case MSG_ACTION_MOVE:
-                    onSliding();
+                    final float curPointX = msg.getData().getFloat(CURRENT_POINT_X);
+                    onSliding(curPointX);
                     break;
 
                 case MSG_ACTION_UP:
                     if (mDistanceX == 0) {
                         if(contentView.getChildCount() >= 3) {
-                            contentView.removeViewAt(1);
-                            resetPreviewView(0);
+                            resetShadowView();
+                            resetPreviewView();
                         }
                     } else if (mDistanceX > width / 4) {
                         mActionHandler.sendEmptyMessage(MSG_SLIDE_PROCEED);
@@ -185,8 +197,8 @@ public class BaseActivity extends AppCompatActivity {
                 case MSG_SLIDE_CANCELED:
                     mDistanceX = 0;
                     mIsSliding = false;
-                    contentView.removeViewAt(1);
-                    resetPreviewView(0);
+                    resetShadowView();
+                    resetPreviewView();
                     break;
 
                 case MSG_SLIDE_PROCEED:
@@ -194,11 +206,12 @@ public class BaseActivity extends AppCompatActivity {
                     break;
 
                 case MSG_SLIDE_FINISHED:
-                    View previousView = contentView.getChildAt(0);
+                    View previousView = mPreviousActivityContentView;
                     PreviousPageView previousPageView = new PreviousPageView(BaseActivity.this);
                     contentView.addView(previousPageView, 0);
                     previousPageView.cacheView(previousView);
-                    resetPreviewView(1);
+                    resetShadowView();
+                    resetPreviewView();
                     finish();
                     overridePendingTransition(0, 0);
                     break;
@@ -231,15 +244,23 @@ public class BaseActivity extends AppCompatActivity {
     /**
      * 手动处理滑动事件
      */
-    private synchronized void onSliding() {
+    private synchronized void onSliding(float curPointX) {
         final int width = getResources().getDisplayMetrics().widthPixels;
         FrameLayout contentView = getContentView();
-        View previewActivityContentView = contentView.getChildAt(0);
-        View shadowView = contentView.getChildAt(1);
-        View currentActivityContentView = contentView.getChildAt(2);
+        View previewActivityContentView = mPreviousActivityContentView;
+        View shadowView = mShadowView;
+        View currentActivityContentView = getDisplayView(contentView);
 
         if (previewActivityContentView == null || currentActivityContentView == null || shadowView == null){
+            mActionHandler.sendEmptyMessage(MSG_SLIDE_CANCELED);
             return;
+        }
+
+        final float distanceX = curPointX - mLastPointX;
+        mLastPointX = curPointX;
+        mDistanceX = mDistanceX + distanceX;
+        if (mDistanceX < 0) {
+            mDistanceX = 0;
         }
 
         previewActivityContentView.setX(-width / 3 + mDistanceX / 3);
@@ -250,20 +271,39 @@ public class BaseActivity extends AppCompatActivity {
     /**
      * 重置上个activity的view状态
      *
-     * @param viewIndex
      */
-    private void resetPreviewView(int viewIndex) {
-        CustomApplication application = (CustomApplication) getApplication();
-        Activity preActivity = application.getActivityLifecycleHelper().getPreActivity();
-        if (preActivity == null) {
-            return;
-        }
+    private void resetPreviewView() {
+        if (mPreviousActivityContentView == null) return;
+        View view = mPreviousActivityContentView;
         FrameLayout contentView = getContentView();
-        View view = contentView.getChildAt(viewIndex);
         view.setX(0);
         contentView.removeView(view);
+
+        CustomApplication application = (CustomApplication) getApplication();
+        Activity preActivity = application.getActivityLifecycleHelper().getPreActivity();
+        if (preActivity == null) return;
         ViewGroup previewContentView = (ViewGroup) preActivity.findViewById(android.R.id.content);
         previewContentView.addView(view);
+        mPreviousActivityContentView = null;
+    }
+
+    private void resetShadowView() {
+        if(mShadowView == null) return;
+        FrameLayout contentView = getContentView();
+        contentView.removeView(mShadowView);
+        mShadowView = null;
+    }
+
+    private View getDisplayView(FrameLayout contentView) {
+        int index = 0;
+        if(mPreviousActivityContentView != null) {
+            index = index + 1;
+        }
+
+        if(mShadowView != null) {
+            index = index + 1;
+        }
+        return contentView.getChildAt(index);
     }
 
     /**
@@ -273,9 +313,9 @@ public class BaseActivity extends AppCompatActivity {
      */
     private void startSlideAnim(final boolean slideCanceled) {
         final FrameLayout contentView = getContentView();
-        final View previewView = contentView.getChildAt(0);
-        final View shadowView = contentView.getChildAt(1);
-        final View currentView = contentView.getChildAt(2);
+        final View previewView = mPreviousActivityContentView;
+        final View shadowView = mShadowView;
+        final View currentView = getDisplayView(contentView);
 
         if (previewView == null || currentView == null) {
             return;
@@ -319,8 +359,8 @@ public class BaseActivity extends AppCompatActivity {
 
             @Override
             public void onAnimationEnd(Animator animation) {
-                mIsSlideAnimPlaying = false;
                 if (slideCanceled) {
+                    mIsSlideAnimPlaying = false;
                     previewView.setX(0);
                     shadowView.setX(-SHADOW_WIDTH);
                     currentView.setX(0);

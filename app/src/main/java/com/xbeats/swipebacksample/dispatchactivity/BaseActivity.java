@@ -31,6 +31,8 @@ import com.xbeats.swipebacksample.common.CustomApplication;
  * Created by fhf11991 on 2016/7/25.
  */
 public class BaseActivity extends AppCompatActivity {
+    private static final String TAG = "BaseActivity";
+
     private static final String CURRENT_POINT_X = "currentPointX"; //点击事件
 
     private static final int MSG_ACTION_DOWN = 1; //点击事件
@@ -42,7 +44,7 @@ public class BaseActivity extends AppCompatActivity {
     private static final int MSG_SLIDE_FINISHED = 7;//结束滑动，返回前一个页面
 
     private static final int SHADOW_WIDTH = 50; //px 阴影宽度
-    private static final int MARGIN_THRESHOLD = 60;  //px 拦截手势区间 0~60
+    private static final int MARGIN_THRESHOLD = 40;  //px 默认拦截手势区间 0~40
 
     private FrameLayout mContentView;
     private View mPreviousActivityContentView;
@@ -51,7 +53,10 @@ public class BaseActivity extends AppCompatActivity {
     private boolean mIsSliding; //是否正在滑动
     private boolean mIsSlideAnimPlaying; //滑动动画展示过程中
     private float mDistanceX;  //px 当前滑动距离 （正数或0）
+    private int mMarginThreshold;  //px 拦截手势区间
     private float mLastPointX;  //记录手势在屏幕上的X轴坐标
+
+    private ActivityManager mActivityManager;
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
@@ -63,13 +68,22 @@ public class BaseActivity extends AppCompatActivity {
             return true;
         }
 
+        if(mMarginThreshold == 0) {  //动态设置滑动拦截事件的区域
+            final int commonMargin = 45;
+            mMarginThreshold = Math.min(MARGIN_THRESHOLD, commonMargin);
+        }
+
+        if(mActivityManager == null) {
+            mActivityManager = new ActivityManager(this);
+        }
+
         final int action = ev.getAction() & MotionEvent.ACTION_MASK;
         final int actionIndex = ev.getActionIndex();
 
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 mLastPointX = ev.getRawX();
-                boolean inThresholdArea = mLastPointX >= 0 && mLastPointX <= MARGIN_THRESHOLD;
+                boolean inThresholdArea = mLastPointX >= 0 && mLastPointX <= mMarginThreshold;
 
                 if(inThresholdArea && mIsSliding) {
                     return true;
@@ -103,6 +117,7 @@ public class BaseActivity extends AppCompatActivity {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_POINTER_UP:
+            case MotionEvent.ACTION_OUTSIDE:
                 if (mIsSliding && actionIndex == 0) { // 取消滑动 或 手势抬起 ，而且手势事件是第一手势，开始滑动动画
                     mIsSliding = false;
                     mActionHandler.sendEmptyMessage(MSG_ACTION_UP);
@@ -136,14 +151,13 @@ public class BaseActivity extends AppCompatActivity {
                     }
                     if (contentView.getChildCount() == 0) return;
 
-                    CustomApplication application = (CustomApplication) getApplication();
-                    Activity previousActivity = application.getActivityLifecycleHelper().getPreActivity();
+                    Activity previousActivity = mActivityManager.getPreviousActivity();
                     if (previousActivity == null) {
                         return;
                     }
 
                     // add content view
-                    ViewGroup previousActivityContainer = (ViewGroup) previousActivity.findViewById(android.R.id.content);
+                    ViewGroup previousActivityContainer = mActivityManager.getContentView(previousActivity);
                     if(previousActivityContainer == null || previousActivityContainer.getChildCount() == 0) {
                         return;
                     }
@@ -199,6 +213,7 @@ public class BaseActivity extends AppCompatActivity {
                     mIsSliding = false;
                     resetShadowView();
                     resetPreviewView();
+                    mActivityManager.clearActivity();
                     break;
 
                 case MSG_SLIDE_PROCEED:
@@ -212,6 +227,7 @@ public class BaseActivity extends AppCompatActivity {
                     previousPageView.cacheView(previousView);
                     resetShadowView();
                     resetPreviewView();
+                    mActivityManager.clearActivity();
                     finish();
                     overridePendingTransition(0, 0);
                     break;
@@ -222,7 +238,7 @@ public class BaseActivity extends AppCompatActivity {
         }
     };
 
-    protected FrameLayout getContentView() {
+    private FrameLayout getContentView() {
         if (mContentView == null) {
             mContentView = (FrameLayout) findViewById(Window.ID_ANDROID_CONTENT);
         }
@@ -279,10 +295,9 @@ public class BaseActivity extends AppCompatActivity {
         view.setX(0);
         contentView.removeView(view);
 
-        CustomApplication application = (CustomApplication) getApplication();
-        Activity preActivity = application.getActivityLifecycleHelper().getPreActivity();
+        Activity preActivity = mActivityManager.getPreviousActivity();
         if (preActivity == null) return;
-        ViewGroup previewContentView = (ViewGroup) preActivity.findViewById(android.R.id.content);
+        final ViewGroup previewContentView = mActivityManager.getContentView(preActivity);
         previewContentView.addView(view);
         mPreviousActivityContentView = null;
     }
@@ -418,8 +433,34 @@ public class BaseActivity extends AppCompatActivity {
                 int colors[] = {0x00000000, 0x17000000, 0x43000000};//分别为开始颜色，中间夜色，结束颜色
                 mDrawable = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors);
             }
-            mDrawable.setBounds(0, 0, getMeasuredWidth(), getMeasuredHeight());
+            mDrawable.setBounds(0, 0, getMeasuredWidth(),  getMeasuredHeight());
             mDrawable.draw(canvas);
+        }
+    }
+
+    private class ActivityManager {
+        private Activity mCurrentActivity;
+        private Activity mPreviousActivity;
+
+        public ActivityManager(Activity activity) {
+            mCurrentActivity = activity;
+        }
+
+        public Activity getPreviousActivity() {
+            if(mPreviousActivity == null) {
+                CustomApplication application = (CustomApplication) mCurrentActivity.getApplication();
+                mPreviousActivity = application.getActivityLifecycleHelper().getPreActivity();
+            }
+            return mPreviousActivity;
+        }
+
+        public void clearActivity() {
+            mPreviousActivity = null;
+        }
+
+        public ViewGroup getContentView(Activity activity) {
+            if(activity == null) return null;
+            return (ViewGroup) activity.findViewById(android.R.id.content);
         }
     }
 }

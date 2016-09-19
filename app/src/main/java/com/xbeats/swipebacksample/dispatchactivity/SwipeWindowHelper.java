@@ -55,10 +55,9 @@ public class SwipeWindowHelper extends Handler {
 
     private boolean mIsSupportSlideBack; //
 
-    private Activity mPreviousActivity;
     private Window mCurrentWindow;
-    private View mPreviousActivityContentView;
-    private View mShadowView;
+    private ViewManager mViewManager;
+    private final FrameLayout mCurrentContentView;
 
 
     public SwipeWindowHelper(@NonNull Window window) {
@@ -68,6 +67,8 @@ public class SwipeWindowHelper extends Handler {
     public SwipeWindowHelper(@NonNull Window window, boolean isSupportSlideBack) {
         mCurrentWindow = window;
         mIsSupportSlideBack = isSupportSlideBack;
+        mCurrentContentView = getContentView(mCurrentWindow);
+        mViewManager = new ViewManager();
     }
 
     public void setSupportSlideBack(boolean supportSlideBack) {
@@ -151,9 +152,6 @@ public class SwipeWindowHelper extends Handler {
     @Override
     public void handleMessage(Message msg) {
         super.handleMessage(msg);
-        final int width = getContext().getResources().getDisplayMetrics().widthPixels;
-        final FrameLayout contentView = getContentView(mCurrentWindow);
-
         switch (msg.what) {
             case MSG_ACTION_DOWN:
                 // hide input method
@@ -162,36 +160,14 @@ public class SwipeWindowHelper extends Handler {
                 if (view != null) {
                     inputMethod.hideSoftInputFromWindow(view.getWindowToken(), 0);
                 }
-                if (contentView.getChildCount() == 0) return;
 
-                Activity previousActivity = getPreviousActivity();
-                if (previousActivity == null) {
-                    return;
-                }
-
-                // add content view
-                ViewGroup previousActivityContainer = getContentView(previousActivity.getWindow());
-                if(previousActivityContainer == null || previousActivityContainer.getChildCount() == 0) {
-                    return;
-                }
-
-                View previousActivityContentView = previousActivityContainer.getChildAt(0);
-                if(previousActivityContentView == null) {
-                    return;
-                }
-                mPreviousActivityContentView = previousActivityContentView;
-                previousActivityContainer.removeView(previousActivityContentView);
-                contentView.addView(previousActivityContentView, 0);
+                if(!mViewManager.addViewFromPreviousActivity()) return;
 
                 // add shadow view on the left of content view
-                mShadowView = new ShadowView(getContext());
-                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                        SHADOW_WIDTH, FrameLayout.LayoutParams.MATCH_PARENT);
-                mShadowView.setX(-SHADOW_WIDTH);
-                contentView.addView(mShadowView, 1, layoutParams);
+                mViewManager.addShadowView();
 
-                if (contentView.getChildCount() >= 3) {
-                    View curView = getDisplayView(contentView);
+                if (mCurrentContentView.getChildCount() >= 3) {
+                    View curView = mViewManager.getDisplayView();
                     if (curView.getBackground() == null) {
                         int color = getWindowBackgroundColor();
                         curView.setBackgroundColor(color);
@@ -205,10 +181,11 @@ public class SwipeWindowHelper extends Handler {
                 break;
 
             case MSG_ACTION_UP:
+                final int width = getContext().getResources().getDisplayMetrics().widthPixels;
                 if (mDistanceX == 0) {
-                    if(contentView.getChildCount() >= 3) {
-                        resetShadowView();
-                        resetPreviewView();
+                    if(mCurrentContentView.getChildCount() >= 3) {
+                        mViewManager.removeShadowView();
+                        mViewManager.resetPreviousView();
                     }
                 } else if (mDistanceX > width / 4) {
                     sendEmptyMessage(MSG_SLIDE_PROCEED);
@@ -224,9 +201,8 @@ public class SwipeWindowHelper extends Handler {
             case MSG_SLIDE_CANCELED:
                 mDistanceX = 0;
                 mIsSliding = false;
-                resetShadowView();
-                resetPreviewView();
-                clearPreviousActivity();
+                mViewManager.removeShadowView();
+                mViewManager.resetPreviousView();
                 break;
 
             case MSG_SLIDE_PROCEED:
@@ -234,13 +210,9 @@ public class SwipeWindowHelper extends Handler {
                 break;
 
             case MSG_SLIDE_FINISHED:
-                View previousView = mPreviousActivityContentView;
-                PreviousPageView previousPageView = new PreviousPageView(getContext());
-                contentView.addView(previousPageView, 0);
-                previousPageView.cacheView(previousView);
-                resetShadowView();
-                resetPreviewView();
-                clearPreviousActivity();
+                mViewManager.addCacheView();
+                mViewManager.removeShadowView();
+                mViewManager.resetPreviousView();
 
                 if(getContext() instanceof Activity) {
                     Activity activity = (Activity) getContext();
@@ -273,32 +245,14 @@ public class SwipeWindowHelper extends Handler {
         }
     }
 
-    public Activity getPreviousActivity() {
-        if(mPreviousActivity == null) {
-            CustomApplication application = (CustomApplication) mCurrentWindow.getContext().getApplicationContext();
-            mPreviousActivity = application.getActivityLifecycleHelper().getPreActivity();
-        }
-        return mPreviousActivity;
-    }
-
-    public void clearPreviousActivity() {
-        mPreviousActivity = null;
-    }
-
-    public FrameLayout getContentView(Window window) {
-        if(window == null) return null;
-        return (FrameLayout) window.findViewById(android.R.id.content);
-    }
-
     /**
      * 手动处理滑动事件
      */
     private synchronized void onSliding(float curPointX) {
         final int width = getContext().getResources().getDisplayMetrics().widthPixels;
-        FrameLayout contentView = getContentView(mCurrentWindow);
-        View previewActivityContentView = mPreviousActivityContentView;
-        View shadowView = mShadowView;
-        View currentActivityContentView = getDisplayView(contentView);
+        View previewActivityContentView = mViewManager.mPreviousContentView;
+        View shadowView = mViewManager.mShadowView;
+        View currentActivityContentView = mViewManager.getDisplayView();
 
         if (previewActivityContentView == null || currentActivityContentView == null || shadowView == null){
             sendEmptyMessage(MSG_SLIDE_CANCELED);
@@ -318,52 +272,14 @@ public class SwipeWindowHelper extends Handler {
     }
 
     /**
-     * 重置上个activity的view状态
-     *
-     */
-    private void resetPreviewView() {
-        if (mPreviousActivityContentView == null) return;
-        View view = mPreviousActivityContentView;
-        FrameLayout contentView = getContentView(mCurrentWindow);
-        view.setX(0);
-        contentView.removeView(view);
-
-        Activity preActivity = getPreviousActivity();
-        if (preActivity == null) return;
-        final ViewGroup previewContentView = getContentView(preActivity.getWindow());
-        previewContentView.addView(view);
-        mPreviousActivityContentView = null;
-    }
-
-    private void resetShadowView() {
-        if(mShadowView == null) return;
-        FrameLayout contentView = getContentView(mCurrentWindow);
-        contentView.removeView(mShadowView);
-        mShadowView = null;
-    }
-
-    private View getDisplayView(FrameLayout contentView) {
-        int index = 0;
-        if(mPreviousActivityContentView != null) {
-            index = index + 1;
-        }
-
-        if(mShadowView != null) {
-            index = index + 1;
-        }
-        return contentView.getChildAt(index);
-    }
-
-    /**
      * 开始自动滑动动画
      *
      * @param slideCanceled 是不是要返回（true则不关闭当前页面）
      */
     private void startSlideAnim(final boolean slideCanceled) {
-        final FrameLayout contentView = getContentView(mCurrentWindow);
-        final View previewView = mPreviousActivityContentView;
-        final View shadowView = mShadowView;
-        final View currentView = getDisplayView(contentView);
+        final View previewView = mViewManager.mPreviousContentView;
+        final View shadowView = mViewManager.mShadowView;
+        final View currentView = mViewManager.getDisplayView();
 
         if (previewView == null || currentView == null) {
             return;
@@ -422,6 +338,105 @@ public class SwipeWindowHelper extends Handler {
         mIsSlideAnimPlaying = true;
     }
 
+
+    private final FrameLayout getContentView(Window window) {
+        if(window == null) return null;
+        return (FrameLayout) window.findViewById(Window.ID_ANDROID_CONTENT);
+    }
+
+    class ViewManager {
+        private Activity mPreviousActivity;
+        private ViewGroup mPreviousContentView;
+        private View mShadowView;
+
+        private boolean addViewFromPreviousActivity() {
+            if(mCurrentContentView.getChildCount() == 0) {
+                mPreviousActivity = null;
+                mPreviousContentView = null;
+                return false;
+            }
+
+            CustomApplication application = (CustomApplication) mCurrentWindow.getContext().getApplicationContext();
+            mPreviousActivity = application.getActivityLifecycleHelper().getPreActivity();
+            if(mPreviousActivity == null) {
+                mPreviousActivity = null;
+                mPreviousContentView = null;
+                return false;
+            }
+
+            ViewGroup previousActivityContainer = getContentView(mPreviousActivity.getWindow());
+            if(previousActivityContainer == null || previousActivityContainer.getChildCount() == 0) {
+                mPreviousActivity = null;
+                mPreviousContentView = null;
+                return false;
+            }
+
+            mPreviousContentView = (ViewGroup) previousActivityContainer.getChildAt(0);
+            previousActivityContainer.removeView(mPreviousContentView);
+            mCurrentContentView.addView(mPreviousContentView, 0);
+            return true;
+        }
+
+        /**
+         * Remove the PreviousContentView at current Activity and put it into previous Activity.
+         */
+        private void resetPreviousView() {
+            if(mPreviousContentView == null) return;
+
+            View view = mPreviousContentView;
+            FrameLayout contentView = mCurrentContentView;
+            view.setX(0);
+            contentView.removeView(view);
+            mPreviousContentView = null;
+
+            if(mPreviousActivity == null) return;
+            Activity preActivity = mPreviousActivity;
+            final ViewGroup previewContentView = getContentView(preActivity.getWindow());
+            previewContentView.addView(view);
+            mPreviousActivity = null;
+        }
+
+        /**
+         * add shadow view on the left of content view
+         */
+        private void addShadowView() {
+            if(mShadowView == null) {
+                mShadowView = new ShadowView(getContext());
+                mShadowView.setX(-SHADOW_WIDTH);
+            }
+            final FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                    SHADOW_WIDTH, FrameLayout.LayoutParams.MATCH_PARENT);
+            final FrameLayout contentView = mCurrentContentView;
+            contentView.addView(mShadowView, 1, layoutParams);
+        }
+
+        private void removeShadowView() {
+            if(mShadowView == null) return;
+            final FrameLayout contentView = getContentView(mCurrentWindow);
+            contentView.removeView(mShadowView);
+            mShadowView = null;
+        }
+
+        private void addCacheView() {
+            final FrameLayout contentView = mCurrentContentView;
+            final View previousView = mPreviousContentView;
+            PreviousPageView previousPageView = new PreviousPageView(getContext());
+            contentView.addView(previousPageView, 0);
+            previousPageView.cacheView(previousView);
+        }
+
+        private View getDisplayView() {
+            int index = 0;
+            if(mViewManager.mPreviousContentView != null) {
+                index = index + 1;
+            }
+
+            if(mViewManager.mShadowView != null) {
+                index = index + 1;
+            }
+            return mCurrentContentView.getChildAt(index);
+        }
+    }
 }
 
 class PreviousPageView extends View {

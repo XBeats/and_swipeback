@@ -8,10 +8,10 @@
     android:gravity="center">
 
     <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:onClick="onApplication"
-        android:text="@string/desc_slide_back" />
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_centerInParent="true"
+    android:onClick="onApplication"
+    android:text="@string/desc_slide_back" />
 
 </LinearLayout>

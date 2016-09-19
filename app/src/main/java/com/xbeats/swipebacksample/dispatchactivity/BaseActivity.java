@@ -14,8 +14,12 @@ public class BaseActivity extends AppCompatActivity {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        if(!supportSlideBack()) {
+            return super.dispatchTouchEvent(ev);
+        }
+
         if(mSwipeWindowHelper == null) {
-            mSwipeWindowHelper = new SwipeWindowHelper(getWindow(), supportSlideBack());
+            mSwipeWindowHelper = new SwipeWindowHelper(getWindow());
         }
         return mSwipeWindowHelper.processTouchEvent(ev) || super.dispatchTouchEvent(ev);
     }

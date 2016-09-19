@@ -349,6 +349,10 @@ public class SwipeWindowHelper extends Handler {
         private ViewGroup mPreviousContentView;
         private View mShadowView;
 
+        /**
+         * Remove view from previous Activity and add into current Activity
+         * @return Is view added successfully
+         */
         private boolean addViewFromPreviousActivity() {
             if(mCurrentContentView.getChildCount() == 0) {
                 mPreviousActivity = null;
@@ -389,7 +393,7 @@ public class SwipeWindowHelper extends Handler {
             contentView.removeView(view);
             mPreviousContentView = null;
 
-            if(mPreviousActivity == null) return;
+            if(mPreviousActivity == null || mPreviousActivity.isFinishing()) return;
             Activity preActivity = mPreviousActivity;
             final ViewGroup previewContentView = getContentView(preActivity.getWindow());
             previewContentView.addView(view);

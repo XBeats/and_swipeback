@@ -20,7 +20,7 @@ Application在Api14之后添加了新的Callback方法
 public void registerActivityLifecycleCallbacks(ActivityLifecycleCallbacks callback) {}
 ```
   
-这样就可以根据activity的生命周期缓存所有Activity，通过list获取上一个activity的实例，从而获取DecorView，并进行展示
+这样就可以根据activity的生命周期缓存所有Activity，通过list获取上一个activity的实例，从而获取id为content的ContentView的子View（即setContentView中的View），并进行滑动展示。
 
 
 #### 包括以下6中状态  

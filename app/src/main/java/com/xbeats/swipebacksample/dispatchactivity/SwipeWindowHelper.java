@@ -16,7 +16,9 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.VelocityTrackerCompat;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -59,6 +61,10 @@ public class SwipeWindowHelper extends Handler {
     private ViewManager mViewManager;
     private final FrameLayout mCurrentContentView;
 
+    private VelocityTracker mVelocityTracker = null;//用于监听手指滑动的速度，当滑动的速度足够快的时候，直接关闭当前页面
+
+    private static final int LIMIT_VELOCITY = 2000;//当手指滑动的速度值大于这个值，则关闭当前页面
+
 
     public SwipeWindowHelper(@NonNull Window window) {
         this(window, true);
@@ -97,23 +103,36 @@ public class SwipeWindowHelper extends Handler {
                 mLastPointX = ev.getRawX();
                 boolean inThresholdArea = mLastPointX >= 0 && mLastPointX <= mMarginThreshold;
 
-                if(inThresholdArea && mIsSliding) {
+                if (inThresholdArea && mIsSliding) {
                     return true;
-                } else if(inThresholdArea && !mIsSliding) { //开始滑动
+                } else if (inThresholdArea && !mIsSliding) { //开始滑动
+                    //初始化速度tracker
+                    if (mVelocityTracker == null) {
+                        mVelocityTracker = VelocityTracker.obtain();
+                    } else {
+                        mVelocityTracker.clear();
+                    }
+                    mVelocityTracker.addMovement(ev);
+
                     mIsSliding = true;
                     sendEmptyMessage(MSG_ACTION_DOWN);
+
+
                     return true;
                 }
                 break;
 
             case MotionEvent.ACTION_POINTER_DOWN:
-                if(mIsSliding) {  //有第二个手势事件加入，而且正在滑动事件中，则直接消费事件
+                if (mIsSliding) {  //有第二个手势事件加入，而且正在滑动事件中，则直接消费事件
                     return true;
                 }
                 break;
 
             case MotionEvent.ACTION_MOVE:
                 if (mIsSliding && actionIndex == 0) { //开始滑动
+                    //速度tracker监听move事件
+                    mVelocityTracker.addMovement(ev);
+
                     Message message = obtainMessage();
                     Bundle bundle = new Bundle();
                     bundle.putFloat(CURRENT_POINT_X, ev.getRawX());
@@ -127,6 +146,15 @@ public class SwipeWindowHelper extends Handler {
                 break;
 
             case MotionEvent.ACTION_UP:
+                if (mIsSliding && actionIndex == 0) {
+                    mVelocityTracker.computeCurrentVelocity(1000);
+                    //计算X坐标方向的速度
+                    float xVelocity = VelocityTrackerCompat.getXVelocity(mVelocityTracker, actionIndex);
+                    if (xVelocity > LIMIT_VELOCITY) {
+                        sendEmptyMessage(MSG_SLIDE_PROCEED);
+                        break;
+                    }
+                }
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_OUTSIDE:

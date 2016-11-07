@@ -346,7 +346,7 @@ public class SwipeWindowHelper extends Handler {
 
     class ViewManager {
         private Activity mPreviousActivity;
-        private ViewGroup mPreviousContentView;
+        private View mPreviousContentView;
         private View mShadowView;
 
         /**
@@ -375,7 +375,7 @@ public class SwipeWindowHelper extends Handler {
                 return false;
             }
 
-            mPreviousContentView = (ViewGroup) previousActivityContainer.getChildAt(0);
+            mPreviousContentView = previousActivityContainer.getChildAt(0);
             previousActivityContainer.removeView(mPreviousContentView);
             mCurrentContentView.addView(mPreviousContentView, 0);
             return true;
@@ -403,7 +403,7 @@ public class SwipeWindowHelper extends Handler {
         /**
          * add shadow view on the left of content view
          */
-        private void addShadowView() {
+        private synchronized void addShadowView() {
             if(mShadowView == null) {
                 mShadowView = new ShadowView(getContext());
                 mShadowView.setX(-SHADOW_WIDTH);
@@ -411,10 +411,16 @@ public class SwipeWindowHelper extends Handler {
             final FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
                     SHADOW_WIDTH, FrameLayout.LayoutParams.MATCH_PARENT);
             final FrameLayout contentView = mCurrentContentView;
-            contentView.addView(mShadowView, 1, layoutParams);
+
+            if(this.mShadowView.getParent() == null) {
+                contentView.addView(this.mShadowView, 1, layoutParams);
+            } else {
+                this.removeShadowView();
+                this.addShadowView();
+            }
         }
 
-        private void removeShadowView() {
+        private synchronized void removeShadowView() {
             if(mShadowView == null) return;
             final FrameLayout contentView = getContentView(mCurrentWindow);
             contentView.removeView(mShadowView);

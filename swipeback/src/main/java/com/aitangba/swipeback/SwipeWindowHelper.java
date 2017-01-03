@@ -1,4 +1,4 @@
-package com.xbeats.swipebacksample.dispatchactivity;
+package com.aitangba.swipeback;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
@@ -25,8 +25,6 @@ import android.view.animation.Interpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 
-import com.xbeats.swipebacksample.common.CustomApplication;
-
 /**
  * Created by fhf11991 on 2016/9/18.
  */
@@ -45,12 +43,12 @@ public class SwipeWindowHelper extends Handler {
     private static final int MSG_SLIDE_FINISHED = 7;//结束滑动，返回前一个页面
 
     private static final int SHADOW_WIDTH = 50; //px 阴影宽度
-    private static final int MARGIN_THRESHOLD = 40;  //px 默认拦截手势区间 0~40
+    private static final int EDGE_SIZE = 20;  //dp 默认拦截手势区间
 
+    private int mEdgeSize;  //px 拦截手势区间
     private boolean mIsSliding; //是否正在滑动
     private boolean mIsSlideAnimPlaying; //滑动动画展示过程中
     private float mDistanceX;  //px 当前滑动距离 （正数或0）
-    private int mMarginThreshold;  //px 拦截手势区间
     private float mLastPointX;  //记录手势在屏幕上的X轴坐标
 
     private boolean mIsSupportSlideBack; //
@@ -69,10 +67,9 @@ public class SwipeWindowHelper extends Handler {
         mIsSupportSlideBack = isSupportSlideBack;
         mCurrentContentView = getContentView(mCurrentWindow);
         mViewManager = new ViewManager();
-    }
 
-    public void setSupportSlideBack(boolean supportSlideBack) {
-        mIsSupportSlideBack = supportSlideBack;
+        final float density = mCurrentWindow.getContext().getResources().getDisplayMetrics().density;
+        mEdgeSize = (int) (EDGE_SIZE * density + 0.5f); //滑动拦截事件的区域
     }
 
     public boolean processTouchEvent(MotionEvent ev) {
@@ -84,18 +81,13 @@ public class SwipeWindowHelper extends Handler {
             return true;
         }
 
-        if(mMarginThreshold == 0) {  //动态设置滑动拦截事件的区域
-            final int commonMargin = 45;
-            mMarginThreshold = Math.min(MARGIN_THRESHOLD, commonMargin);
-        }
-
         final int action = ev.getAction() & MotionEvent.ACTION_MASK;
         final int actionIndex = ev.getActionIndex();
 
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 mLastPointX = ev.getRawX();
-                boolean inThresholdArea = mLastPointX >= 0 && mLastPointX <= mMarginThreshold;
+                boolean inThresholdArea = mLastPointX >= 0 && mLastPointX <= mEdgeSize;
 
                 if(inThresholdArea && mIsSliding) {
                     return true;
@@ -360,9 +352,16 @@ public class SwipeWindowHelper extends Handler {
                 return false;
             }
 
-            CustomApplication application = (CustomApplication) mCurrentWindow.getContext().getApplicationContext();
-            mPreviousActivity = application.getActivityLifecycleHelper().getPreActivity();
+            mPreviousActivity = ActivityLifecycleHelper.getPreviousActivity();
             if(mPreviousActivity == null) {
+                mPreviousActivity = null;
+                mPreviousContentView = null;
+                return false;
+            }
+
+            //Previous activity not support to be swipeBack...
+            if(mPreviousActivity instanceof SwipeBackActivity &&
+                    !((SwipeBackActivity)mPreviousActivity).canBeSlideBack()) {
                 mPreviousActivity = null;
                 mPreviousContentView = null;
                 return false;

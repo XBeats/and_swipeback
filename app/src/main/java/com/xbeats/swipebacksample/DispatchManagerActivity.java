@@ -1,6 +1,5 @@
-package com.xbeats.swipebacksample.dispatchactivity;
+package com.xbeats.swipebacksample;
 
-import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -8,17 +7,14 @@ import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.xbeats.swipebacksample.MainActivity;
-import com.xbeats.swipebacksample.R;
+import com.aitangba.swipeback.SwipeBackActivity;
 
 import java.util.Random;
 
 /**
  * Created by fhf11991 on 2016/7/25.
  */
-public class DispatchManagerActivity extends BaseActivity{
-
-    private final String TAG = "DispatchManagerActivity";
+public class DispatchManagerActivity extends SwipeBackActivity {
 
     private int page;
 
@@ -41,19 +37,20 @@ public class DispatchManagerActivity extends BaseActivity{
         page = MainActivity.Page;
         textView.setText("当前页" + page);
 
-        textView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Dialog dialog  = new SwipeDialog(DispatchManagerActivity.this, android.R.style.Theme_Translucent_NoTitleBar);
-                dialog.setContentView(R.layout.dialog_full_view);
-                dialog.show();
-            }
-        });
-
     }
 
     public void nextPage(View v) {
         startActivity(new Intent(this, DispatchManagerActivity.class));
         MainActivity.Page ++;
+    }
+
+    @Override
+    protected boolean supportSlideBack() {
+        return super.supportSlideBack();
+    }
+
+    @Override
+    protected boolean canBeSlideBack() {
+        return super.canBeSlideBack();
     }
 }

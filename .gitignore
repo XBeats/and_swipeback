@@ -1,7 +1,9 @@
 *.iml
 .gradle
 /local.properties
+
 /.idea/workspace.xml
+
 /.idea
 /build
 /captures

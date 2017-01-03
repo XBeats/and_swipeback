@@ -1,4 +1,4 @@
-package com.xbeats.swipebacksample.dispatchactivity;
+package com.aitangba.swipeback;
 
 import android.support.v7.app.AppCompatActivity;
 import android.view.MotionEvent;
@@ -7,8 +7,9 @@ import android.view.MotionEvent;
 /**
  * Created by fhf11991 on 2016/7/25.
  */
-public class BaseActivity extends AppCompatActivity {
-    private static final String TAG = "BaseActivity";
+public class SwipeBackActivity extends AppCompatActivity {
+
+    private static final String TAG = "SwipeBackActivity";
 
     private SwipeWindowHelper mSwipeWindowHelper;
 
@@ -30,6 +31,14 @@ public class BaseActivity extends AppCompatActivity {
      * @return
      */
     protected boolean supportSlideBack() {
+        return true;
+    }
+
+    /**
+     * 能否滑动返回至当前Activity
+     * @return
+     */
+    protected boolean canBeSlideBack() {
         return true;
     }
 }

@@ -27,5 +27,6 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:23.3.0'
-    compile project(':swipeback')
+//    compile project(':swipeback')
+    compile 'com.aitangba:swipeback:1.0.0'
 }

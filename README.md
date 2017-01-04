@@ -11,8 +11,36 @@ Features
 - 无需设置 `<item name="android:windowIsTranslucent">true</item>`  
 - 支持Dialog的滑动返回
 
+Getting started
+---  
+
+**Firstly,add the following lines to your app/build.gradle.** 
+```gradle
+dependencies {  
+    compile 'com.aitangba:swipeback:1.0.0'
+}
+```  
+**Secondly, add the following lines to your application.**
+``` java
+public class CustomApplication extends Application{
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        registerActivityLifecycleCallbacks(ActivityLifecycleHelper.build());
+    }
+
+}
+```
+**Finally, set the activity which need to swipe extends the SwipeBackActivity.**
+``` java
+public class BaseActivity extends SwipeBackActivity {
+
+}
+```
+
 Usage
---------
+------
 #### 主要思想
 Application在Api14之后添加了新的Callback方法  
 

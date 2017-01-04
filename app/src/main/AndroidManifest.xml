@@ -17,7 +17,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.xbeats.swipebacksample.DispatchManagerActivity"
+            android:name="com.xbeats.swipebacksample.SwipeActivity"
             android:label="SlideBackActivity"/>
     </application>
 

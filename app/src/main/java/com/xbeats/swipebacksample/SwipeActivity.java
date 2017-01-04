@@ -14,7 +14,8 @@ import java.util.Random;
 /**
  * Created by fhf11991 on 2016/7/25.
  */
-public class DispatchManagerActivity extends SwipeBackActivity {
+
+public class SwipeActivity extends SwipeBackActivity {
 
     private int page;
 
@@ -23,7 +24,7 @@ public class DispatchManagerActivity extends SwipeBackActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_next);
 
-        RelativeLayout containerRlt = (RelativeLayout) findViewById(R.id.container);
+        RelativeLayout containerLayout = (RelativeLayout) findViewById(R.id.container);
 
         //随机色
         Random random = new Random();
@@ -31,17 +32,25 @@ public class DispatchManagerActivity extends SwipeBackActivity {
         int green = random.nextInt(255);
         int blue = random.nextInt(255);
 
-        containerRlt.setBackgroundColor(Color.argb(255,red,green,blue));
+        containerLayout.setBackgroundColor(Color.argb(255, red, green, blue));
 
         TextView textView = (TextView) findViewById(R.id.text);
         page = MainActivity.Page;
         textView.setText("当前页" + page);
 
+        findViewById(R.id.next_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MainActivity.Page ++;
+                startActivity(new Intent(SwipeActivity.this, SwipeActivity.class));
+            }
+        });
     }
 
-    public void nextPage(View v) {
-        startActivity(new Intent(this, DispatchManagerActivity.class));
-        MainActivity.Page ++;
+    @Override
+    public void onBackPressed() {
+        MainActivity.Page --;
+        super.onBackPressed();
     }
 
     @Override

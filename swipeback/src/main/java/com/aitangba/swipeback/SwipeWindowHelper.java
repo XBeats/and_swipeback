@@ -28,6 +28,7 @@ import android.widget.FrameLayout;
 /**
  * Created by fhf11991 on 2016/9/18.
  */
+
 public class SwipeWindowHelper extends Handler {
 
     private static final String TAG = "SwipeWindowHelper";

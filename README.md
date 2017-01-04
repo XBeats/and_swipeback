@@ -1,12 +1,9 @@
 # SwipeBack
 
 # Features
-
-- 和Activity的theme并无关系
+- 不需要设置透明theme或`windowIsTranslucent = true`
 - 不影响activity的生命周期
-- 只需继承BaseActivity  
-- `isSupportSwipeBack` 唯一API方法,简单实用   
-- 无需设置 `<item name="android:windowIsTranslucent">true</item>`  
+- 只需继承SwipeBackActivity
 - 支持Dialog的滑动返回
 
 # Getting started

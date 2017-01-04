@@ -48,7 +48,7 @@ Application在Api14之后添加了新的Callback方法
   
 这样就可以根据activity的生命周期缓存所有Activity，通过list获取上一个activity的实例，从而获取id为content的ContentView的子View（即setContentView中的View），并进行滑动展示。  
 
-默认activity是支持滑动返回的，不需要返回的则需要复写SwipeBackActivity的方法`supportSlideBack`，其中方法`canBeSlideBack`意思是能否返回至本Activity；两个方法相互配合使用，以应对各种需求。 
+默认SwipeBackActivity是支持滑动返回的，不需要滑动返回时则需要复写SwipeBackActivity的方法`supportSlideBack`，其中方法`canBeSlideBack`意思是能否返回至本Activity；两个方法相互配合使用，以应对各种需求。 
 ```java
  
    public class SwipeBackActivity extends AppCompatActivity {
@@ -67,9 +67,8 @@ Application在Api14之后添加了新的Callback方法
         return mSwipeWindowHelper.processTouchEvent(ev) || super.dispatchTouchEvent(ev);
     }
 
-        /**
+    /**
      * 是否支持滑动返回
-     *
      * @return
      */
     protected boolean supportSlideBack() {

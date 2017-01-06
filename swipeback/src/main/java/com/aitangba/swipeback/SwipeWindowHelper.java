@@ -60,17 +60,23 @@ public class SwipeWindowHelper extends Handler {
 
 
     public SwipeWindowHelper(@NonNull Window window) {
-        this(window, true);
+        this(window, true, EDGE_SIZE);
     }
 
-    public SwipeWindowHelper(@NonNull Window window, boolean isSupportSlideBack) {
+    /**
+     *
+     * @param window
+     * @param isSupportSlideBack
+     * @param edgeSize dp 滑动拦截事件的区域
+     */
+    public SwipeWindowHelper(@NonNull Window window, boolean isSupportSlideBack, int edgeSize) {
         mCurrentWindow = window;
         mIsSupportSlideBack = isSupportSlideBack;
         mCurrentContentView = getContentView(mCurrentWindow);
         mViewManager = new ViewManager();
 
         final float density = mCurrentWindow.getContext().getResources().getDisplayMetrics().density;
-        mEdgeSize = (int) (EDGE_SIZE * density + 0.5f); //滑动拦截事件的区域
+        mEdgeSize = (int) (edgeSize * density + 0.5f);
     }
 
     public boolean processTouchEvent(MotionEvent ev) {
@@ -361,8 +367,8 @@ public class SwipeWindowHelper extends Handler {
             }
 
             //Previous activity not support to be swipeBack...
-            if(mPreviousActivity instanceof SwipeBackActivity &&
-                    !((SwipeBackActivity)mPreviousActivity).canBeSlideBack()) {
+            if(mPreviousActivity instanceof SlideCallback &&
+                    !((SlideCallback)mPreviousActivity).canBeSlideBack()) {
                 mPreviousActivity = null;
                 mPreviousContentView = null;
                 return false;

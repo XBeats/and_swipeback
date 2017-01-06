@@ -3,9 +3,11 @@ package com.xbeats.swipebacksample;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.aitangba.swipeback.SwipeBackActivity;
 
@@ -16,6 +18,8 @@ import java.util.Random;
  */
 
 public class SwipeActivity extends SwipeBackActivity {
+
+    private static final String TAG = "SwipeActivity";
 
     private int page;
 
@@ -37,6 +41,12 @@ public class SwipeActivity extends SwipeBackActivity {
         TextView textView = (TextView) findViewById(R.id.text);
         page = MainActivity.Page;
         textView.setText("当前页" + page);
+        textView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(getApplicationContext(), "点击了当前页", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         findViewById(R.id.next_btn).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -45,6 +55,7 @@ public class SwipeActivity extends SwipeBackActivity {
                 startActivity(new Intent(SwipeActivity.this, SwipeActivity.class));
             }
         });
+        Log.d(TAG, "onCreate----------  Page = " + page);
     }
 
     @Override
@@ -54,12 +65,30 @@ public class SwipeActivity extends SwipeBackActivity {
     }
 
     @Override
-    protected boolean supportSlideBack() {
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        Log.d(TAG, "onRestoreInstanceState=====  Page = " + page);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Log.d(TAG, "onSaveInstanceState----------  Page = " + page);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.d(TAG, "onActivityResult----------  Page = " + page);
+    }
+
+    @Override
+    public boolean supportSlideBack() {
         return super.supportSlideBack();
     }
 
     @Override
-    protected boolean canBeSlideBack() {
+    public boolean canBeSlideBack() {
         return super.canBeSlideBack();
     }
 }

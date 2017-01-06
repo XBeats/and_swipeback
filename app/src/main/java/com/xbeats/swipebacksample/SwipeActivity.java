@@ -46,6 +46,13 @@ public class SwipeActivity extends SwipeBackActivity {
                 Toast.makeText(getApplicationContext(), "点击了当前页" + page, Toast.LENGTH_SHORT).show();
             }
         });
+        textView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Toast.makeText(getApplicationContext(), "触发了长按事件", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
 
         findViewById(R.id.next_btn).setOnClickListener(new View.OnClickListener() {
             @Override

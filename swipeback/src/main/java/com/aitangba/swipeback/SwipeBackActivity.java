@@ -7,11 +7,11 @@ import android.view.MotionEvent;
 /**
  * Created by fhf11991 on 2016/7/25.
  */
-public class SwipeBackActivity extends AppCompatActivity implements SlideCallback {
+public class SwipeBackActivity extends AppCompatActivity implements SwipeBackHelper.SlideBackManager {
 
     private static final String TAG = "SwipeBackActivity";
 
-    private SwipeWindowHelper mSwipeWindowHelper;
+    private SwipeBackHelper mSwipeBackHelper;
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
@@ -19,10 +19,10 @@ public class SwipeBackActivity extends AppCompatActivity implements SlideCallbac
             return super.dispatchTouchEvent(ev);
         }
 
-        if(mSwipeWindowHelper == null) {
-            mSwipeWindowHelper = new SwipeWindowHelper(getWindow());
+        if(mSwipeBackHelper == null) {
+            mSwipeBackHelper = new SwipeBackHelper(getWindow());
         }
-        return mSwipeWindowHelper.processTouchEvent(ev) || super.dispatchTouchEvent(ev);
+        return mSwipeBackHelper.processTouchEvent(ev) || super.dispatchTouchEvent(ev);
     }
 
 
@@ -38,8 +38,8 @@ public class SwipeBackActivity extends AppCompatActivity implements SlideCallbac
 
     @Override
     public void finish() {
-        if(mSwipeWindowHelper != null) {
-            mSwipeWindowHelper.finishSwipeImmediately();
+        if(mSwipeBackHelper != null) {
+            mSwipeBackHelper.finishSwipeImmediately();
         }
         super.finish();
     }

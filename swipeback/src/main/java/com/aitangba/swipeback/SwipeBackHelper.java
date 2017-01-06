@@ -30,9 +30,9 @@ import android.widget.FrameLayout;
  * Created by fhf11991 on 2016/9/18.
  */
 
-public class SwipeWindowHelper extends Handler {
+public class SwipeBackHelper extends Handler {
 
-    private static final String TAG = "SwipeWindowHelper";
+    private static final String TAG = "SwipeBackHelper";
 
     private static final String CURRENT_POINT_X = "currentPointX"; //点击事件
 
@@ -62,7 +62,7 @@ public class SwipeWindowHelper extends Handler {
     private final FrameLayout mCurrentContentView;
     private AnimatorSet mAnimatorSet;
 
-    public SwipeWindowHelper(@NonNull Window window) {
+    public SwipeBackHelper(@NonNull Window window) {
         this(window, true);
     }
 
@@ -71,7 +71,7 @@ public class SwipeWindowHelper extends Handler {
      * @param window
      * @param isSupportSlideBack
      */
-    public SwipeWindowHelper(@NonNull Window window, boolean isSupportSlideBack) {
+    public SwipeBackHelper(@NonNull Window window, boolean isSupportSlideBack) {
         mCurrentWindow = window;
         mIsSupportSlideBack = isSupportSlideBack;
         mCurrentContentView = getContentView(mCurrentWindow);
@@ -117,7 +117,8 @@ public class SwipeWindowHelper extends Handler {
             case MotionEvent.ACTION_MOVE:
                 final float curPointX = ev.getRawX();
 
-                if(!mIsSliding) {
+                boolean isSliding = mIsSliding;
+                if(!isSliding) {
                     if(Math.abs(curPointX - mLastPointX) < mTouchSlop) { //判断是否满足滑动
                         return false;
                     } else {
@@ -133,8 +134,15 @@ public class SwipeWindowHelper extends Handler {
                         message.what = MSG_ACTION_MOVE;
                         message.setData(bundle);
                         sendMessage(message);
-                        return true;
+
+                        if(isSliding == mIsSliding) {
+                            return true;
+                        } else {
+                            ev.setLocation(Integer.MAX_VALUE, 0); //修正事件，手动修改事件为 ACTION_CANCEL
+                            return false;
+                        }
                     }
+
                 } else {
                     if(mIsSliding) {
                         return true;
@@ -405,8 +413,8 @@ public class SwipeWindowHelper extends Handler {
             }
 
             //Previous activity not support to be swipeBack...
-            if(mPreviousActivity instanceof SlideCallback &&
-                    !((SlideCallback)mPreviousActivity).canBeSlideBack()) {
+            if(mPreviousActivity instanceof SlideBackManager &&
+                    !((SlideBackManager)mPreviousActivity).canBeSlideBack()) {
                 mPreviousActivity = null;
                 mPreviousContentView = null;
                 return false;
@@ -490,6 +498,23 @@ public class SwipeWindowHelper extends Handler {
             }
             return mCurrentContentView.getChildAt(index);
         }
+    }
+
+    public interface SlideBackManager {
+
+        /**
+         * 是否支持滑动返回
+         *
+         * @return
+         */
+        boolean supportSlideBack();
+
+        /**
+         * 能否滑动返回至当前Activity
+         * @return
+         */
+        boolean canBeSlideBack();
+
     }
 }
 

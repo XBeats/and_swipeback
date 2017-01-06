@@ -35,4 +35,12 @@ public class SwipeBackActivity extends AppCompatActivity implements SlideCallbac
     public boolean canBeSlideBack() {
         return true;
     }
+
+    @Override
+    public void finish() {
+        if(mSwipeWindowHelper != null) {
+            mSwipeWindowHelper.finishSwipeImmediately();
+        }
+        super.finish();
+    }
 }

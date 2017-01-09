@@ -128,9 +128,9 @@ public class SwipeBackHelper extends Handler {
                     }
                 }
 
-                Message message = obtainMessage();
                 Bundle bundle = new Bundle();
                 bundle.putFloat(CURRENT_POINT_X, curPointX);
+                Message message = obtainMessage();
                 message.what = MSG_ACTION_MOVE;
                 message.setData(bundle);
                 sendMessage(message);
@@ -138,7 +138,7 @@ public class SwipeBackHelper extends Handler {
                 if(isSliding == mIsSliding) {
                     return true;
                 } else {
-                    ev.setLocation(Integer.MAX_VALUE, 0); //修正事件，手动修改事件为 ACTION_CANCEL
+                    ev.setLocation(Integer.MAX_VALUE, 0); //首次判定为滑动需要修正事件：手动修改事件为 ACTION_CANCEL，并通知底层View
                     return false;
                 }
 

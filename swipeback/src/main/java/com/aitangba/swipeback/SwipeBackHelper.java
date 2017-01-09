@@ -6,7 +6,6 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
@@ -14,7 +13,6 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.view.MotionEvent;
 import android.view.View;
@@ -57,29 +55,28 @@ public class SwipeBackHelper extends Handler {
     private int mTouchSlop;
     private boolean mIsInThresholdArea;
 
-    private Window mCurrentWindow;
+    private Activity mActivity;
     private ViewManager mViewManager;
     private final FrameLayout mCurrentContentView;
     private AnimatorSet mAnimatorSet;
 
-    public SwipeBackHelper(@NonNull Window window) {
-        this(window, true);
-    }
-
     /**
      *
-     * @param window
-     * @param isSupportSlideBack
+     * @param slideBackManager
      */
-    public SwipeBackHelper(@NonNull Window window, boolean isSupportSlideBack) {
-        mCurrentWindow = window;
-        mIsSupportSlideBack = isSupportSlideBack;
-        mCurrentContentView = getContentView(mCurrentWindow);
+    public SwipeBackHelper(SlideBackManager slideBackManager) {
+        if(slideBackManager == null || slideBackManager.getSlideActivity() == null) {
+            throw new RuntimeException("Neither SlideBackManager nor the method 'getSlideActivity()' can be null!");
+        }
+
+        mActivity = slideBackManager.getSlideActivity();
+        mIsSupportSlideBack = slideBackManager.supportSlideBack();
+        mCurrentContentView = getContentView(mActivity);
         mViewManager = new ViewManager();
 
-        mTouchSlop = ViewConfiguration.get(window.getContext()).getScaledTouchSlop();
+        mTouchSlop = ViewConfiguration.get(mActivity).getScaledTouchSlop();
 
-        final float density = mCurrentWindow.getContext().getResources().getDisplayMetrics().density;
+        final float density = mActivity.getResources().getDisplayMetrics().density;
         mEdgeSize = (int) (EDGE_SIZE * density + 0.5f); //滑动拦截事件的区域
     }
 
@@ -115,6 +112,11 @@ public class SwipeBackHelper extends Handler {
                 break;
 
             case MotionEvent.ACTION_MOVE:
+                //一旦触发滑动机制，拦截所有其他手指的滑动事件
+                if(actionIndex != 0) {
+                    return mIsSliding;
+                }
+
                 final float curPointX = ev.getRawX();
 
                 boolean isSliding = mIsSliding;
@@ -126,29 +128,19 @@ public class SwipeBackHelper extends Handler {
                     }
                 }
 
-                if(actionIndex == 0) {
-                    if(mIsSliding) { //开始滑动
-                        Message message = obtainMessage();
-                        Bundle bundle = new Bundle();
-                        bundle.putFloat(CURRENT_POINT_X, curPointX);
-                        message.what = MSG_ACTION_MOVE;
-                        message.setData(bundle);
-                        sendMessage(message);
+                Message message = obtainMessage();
+                Bundle bundle = new Bundle();
+                bundle.putFloat(CURRENT_POINT_X, curPointX);
+                message.what = MSG_ACTION_MOVE;
+                message.setData(bundle);
+                sendMessage(message);
 
-                        if(isSliding == mIsSliding) {
-                            return true;
-                        } else {
-                            ev.setLocation(Integer.MAX_VALUE, 0); //修正事件，手动修改事件为 ACTION_CANCEL
-                            return false;
-                        }
-                    }
-
+                if(isSliding == mIsSliding) {
+                    return true;
                 } else {
-                    if(mIsSliding) {
-                        return true;
-                    }
+                    ev.setLocation(Integer.MAX_VALUE, 0); //修正事件，手动修改事件为 ACTION_CANCEL
+                    return false;
                 }
-                break;
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
@@ -175,11 +167,11 @@ public class SwipeBackHelper extends Handler {
         return false;
     }
 
-    public Context getContext() {
-        return mCurrentWindow == null ? null : mCurrentWindow.getContext();
-    }
-
     public void finishSwipeImmediately() {
+        if(mIsSliding) {
+            mViewManager.addCacheView();
+            mViewManager.resetPreviousView();
+        }
 
         if(mAnimatorSet != null) {
             mAnimatorSet.cancel();
@@ -192,6 +184,8 @@ public class SwipeBackHelper extends Handler {
         removeMessages(MSG_SLIDE_CANCELED);
         removeMessages(MSG_SLIDE_PROCEED);
         removeMessages(MSG_SLIDE_FINISHED);
+
+        mActivity = null;
     }
 
     @Override
@@ -200,8 +194,8 @@ public class SwipeBackHelper extends Handler {
         switch (msg.what) {
             case MSG_ACTION_DOWN:
                 // hide input method
-                InputMethodManager inputMethod = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-                View view = mCurrentWindow.getCurrentFocus();
+                InputMethodManager inputMethod = (InputMethodManager) mActivity.getSystemService(Context.INPUT_METHOD_SERVICE);
+                View view = mActivity.getCurrentFocus();
                 if (view != null) {
                     inputMethod.hideSoftInputFromWindow(view.getWindowToken(), 0);
                 }
@@ -226,7 +220,7 @@ public class SwipeBackHelper extends Handler {
                 break;
 
             case MSG_ACTION_UP:
-                final int width = getContext().getResources().getDisplayMetrics().widthPixels;
+                final int width = mActivity.getResources().getDisplayMetrics().widthPixels;
                 if (mDistanceX == 0) {
                     if(mCurrentContentView.getChildCount() >= 3) {
                         mViewManager.removeShadowView();
@@ -259,18 +253,9 @@ public class SwipeBackHelper extends Handler {
                 mViewManager.removeShadowView();
                 mViewManager.resetPreviousView();
 
-                if(getContext() instanceof Activity) {
-                    Activity activity = (Activity) getContext();
-                    activity.finish();
-                    activity.overridePendingTransition(0, 0);
-                } else if(getContext() instanceof ContextWrapper) {
-                    Context baseContext = ((ContextWrapper)getContext()).getBaseContext();
-                    if(baseContext instanceof Activity) {
-                        Activity activity = (Activity) baseContext;
-                        activity.finish();
-                        activity.overridePendingTransition(0, 0);
-                    }
-                }
+                Activity activity = mActivity;
+                activity.finish();
+                activity.overridePendingTransition(0, 0);
                 break;
 
             default:
@@ -281,8 +266,8 @@ public class SwipeBackHelper extends Handler {
     private int getWindowBackgroundColor() {
         TypedArray array = null;
         try {
-            array = getContext().getTheme().obtainStyledAttributes(new int[]{android.R.attr.windowBackground});
-            return array.getColor(0, ContextCompat.getColor(getContext(), android.R.color.transparent));
+            array = mActivity.getTheme().obtainStyledAttributes(new int[]{android.R.attr.windowBackground});
+            return array.getColor(0, ContextCompat.getColor(mActivity, android.R.color.transparent));
         } finally {
             if (array != null) {
                 array.recycle();
@@ -294,7 +279,7 @@ public class SwipeBackHelper extends Handler {
      * 手动处理滑动事件
      */
     private synchronized void onSliding(float curPointX) {
-        final int width = getContext().getResources().getDisplayMetrics().widthPixels;
+        final int width = mActivity.getResources().getDisplayMetrics().widthPixels;
         View previewActivityContentView = mViewManager.mPreviousContentView;
         View shadowView = mViewManager.mShadowView;
         View currentActivityContentView = mViewManager.getDisplayView();
@@ -330,7 +315,7 @@ public class SwipeBackHelper extends Handler {
             return;
         }
 
-        int width = getContext().getResources().getDisplayMetrics().widthPixels;
+        int width = mActivity.getResources().getDisplayMetrics().widthPixels;
         Interpolator interpolator = new DecelerateInterpolator(2f);
 
         // preview activity's animation
@@ -384,9 +369,8 @@ public class SwipeBackHelper extends Handler {
     }
 
 
-    private final FrameLayout getContentView(Window window) {
-        if(window == null) return null;
-        return (FrameLayout) window.findViewById(Window.ID_ANDROID_CONTENT);
+    private final FrameLayout getContentView(Activity activity) {
+        return (FrameLayout) activity.findViewById(Window.ID_ANDROID_CONTENT);
     }
 
     class ViewManager {
@@ -420,7 +404,7 @@ public class SwipeBackHelper extends Handler {
                 return false;
             }
 
-            ViewGroup previousActivityContainer = getContentView(mPreviousActivity.getWindow());
+            ViewGroup previousActivityContainer = getContentView(mPreviousActivity);
             if(previousActivityContainer == null || previousActivityContainer.getChildCount() == 0) {
                 mPreviousActivity = null;
                 mPreviousContentView = null;
@@ -447,7 +431,7 @@ public class SwipeBackHelper extends Handler {
 
             if(mPreviousActivity == null || mPreviousActivity.isFinishing()) return;
             Activity preActivity = mPreviousActivity;
-            final ViewGroup previewContentView = getContentView(preActivity.getWindow());
+            final ViewGroup previewContentView = getContentView(preActivity);
             previewContentView.addView(view);
             mPreviousActivity = null;
         }
@@ -457,7 +441,7 @@ public class SwipeBackHelper extends Handler {
          */
         private synchronized void addShadowView() {
             if(mShadowView == null) {
-                mShadowView = new ShadowView(getContext());
+                mShadowView = new ShadowView(mActivity);
                 mShadowView.setX(-SHADOW_WIDTH);
             }
             final FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
@@ -474,7 +458,7 @@ public class SwipeBackHelper extends Handler {
 
         private synchronized void removeShadowView() {
             if(mShadowView == null) return;
-            final FrameLayout contentView = getContentView(mCurrentWindow);
+            final FrameLayout contentView = getContentView(mActivity);
             contentView.removeView(mShadowView);
             mShadowView = null;
         }
@@ -482,7 +466,7 @@ public class SwipeBackHelper extends Handler {
         private void addCacheView() {
             final FrameLayout contentView = mCurrentContentView;
             final View previousView = mPreviousContentView;
-            PreviousPageView previousPageView = new PreviousPageView(getContext());
+            PreviousPageView previousPageView = new PreviousPageView(mActivity);
             contentView.addView(previousPageView, 0);
             previousPageView.cacheView(previousView);
         }
@@ -501,6 +485,8 @@ public class SwipeBackHelper extends Handler {
     }
 
     public interface SlideBackManager {
+
+        Activity getSlideActivity();
 
         /**
          * 是否支持滑动返回

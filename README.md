@@ -1,4 +1,8 @@
 # SwipeBack
+利用滑动手势退出当前Activity  
+
+![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
+![maven--central](https://img.shields.io/badge/maven--central-1.0.1-blue.svg)
 
 # Features
 - 不需要设置透明theme或`windowIsTranslucent = true`
@@ -11,7 +15,7 @@
 **Firstly,add the following lines to your app/build.gradle.** 
 ```gradle
 dependencies {  
-    compile 'com.aitangba:swipeback:1.0.0'
+    compile 'com.aitangba:swipeback:1.0.1'
 }
 ```  
 **Secondly, add the following lines to your application.**

@@ -48,38 +48,44 @@ Application在Api14之后添加了新的Callback方法
 默认SwipeBackActivity是支持滑动返回的，不需要滑动返回时则需要复写SwipeBackActivity的方法`supportSlideBack`，其中方法`canBeSlideBack`意思是能否返回至本Activity；两个方法相互配合使用，以应对各种需求。 
 ```java
  
-   public class SwipeBackActivity extends AppCompatActivity {
+   public class SwipeBackActivity extends AppCompatActivity implements SwipeBackHelper.SlideBackManager {
 
-    private SwipeWindowHelper mSwipeWindowHelper;
+    private static final String TAG = "SwipeBackActivity";
+
+    private SwipeBackHelper mSwipeBackHelper;
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        if(!supportSlideBack()) {
-            return super.dispatchTouchEvent(ev);
+        if(mSwipeBackHelper == null) {
+            mSwipeBackHelper = new SwipeBackHelper(this);
         }
-
-        if(mSwipeWindowHelper == null) {
-            mSwipeWindowHelper = new SwipeWindowHelper(getWindow());
-        }
-        return mSwipeWindowHelper.processTouchEvent(ev) || super.dispatchTouchEvent(ev);
+        return mSwipeBackHelper.processTouchEvent(ev) || super.dispatchTouchEvent(ev);
     }
 
-    /**
-     * 是否支持滑动返回
-     * @return
-     */
-    protected boolean supportSlideBack() {
+    @Override
+    public Activity getSlideActivity() {
+        return this;
+    }
+
+    @Override
+    public boolean supportSlideBack() {
         return true;
     }
 
-    /**
-     * 能否滑动返回至当前Activity
-     * @return
-     */
-    protected boolean canBeSlideBack() {
+    @Override
+    public boolean canBeSlideBack() {
         return true;
     }
-   }
+
+    @Override
+    public void finish() {
+        if(mSwipeBackHelper != null) {
+            mSwipeBackHelper.finishSwipeImmediately();
+            mSwipeBackHelper = null;
+        }
+        super.finish();
+    }
+}
 ```
 ### 6种事件状态  
 
@@ -110,6 +116,12 @@ Application在Api14之后添加了新的Callback方法
 # ScreenShot
 
 ![image](./screenshot/swipeback.gif)
+
+# Update
+ * 1.0.1  
+   添加接口SlideBackManager；  
+   修正手势判断，仅在可滑动区域进行滑动手势判断，不干扰点击或长按事件；  
+   修复由于其他多线程在滑动页面进行中时，调用finish方法导致异常发生的问题
 
 # License
 

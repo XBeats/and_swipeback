@@ -138,8 +138,10 @@ public class SwipeBackHelper extends Handler {
                 if(isSliding == mIsSliding) {
                     return true;
                 } else {
-                    ev.setLocation(Integer.MAX_VALUE, 0); //首次判定为滑动需要修正事件：手动修改事件为 ACTION_CANCEL，并通知底层View
-                    return false;
+                    MotionEvent cancelEvent = MotionEvent.obtain(ev); //首次判定为滑动需要修正事件：手动修改事件为 ACTION_CANCEL，并通知底层View
+                    cancelEvent.setAction(MotionEvent.ACTION_CANCEL);
+                    mActivity.getWindow().superDispatchTouchEvent(cancelEvent);
+                    return true;
                 }
 
             case MotionEvent.ACTION_UP:

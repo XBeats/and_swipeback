@@ -2,7 +2,7 @@
 利用滑动手势退出当前Activity  
 
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
-![maven--central](https://img.shields.io/badge/maven--central-1.0.1-blue.svg)
+![maven--central](https://img.shields.io/badge/maven--central-1.0.2-blue.svg)
 
 # Features
 - 不需要设置透明theme或`windowIsTranslucent = true`
@@ -17,7 +17,7 @@
 dependencies {  
     compile 'com.aitangba:swipeback:1.0.1'
 }
-```  
+```
 **Secondly, add the following lines to your application.**
 ``` java
 public class CustomApplication extends Application{
@@ -46,7 +46,7 @@ Application在Api14之后添加了新的Callback方法
 
     }
 ```
-  
+
 这样就可以根据activity的生命周期缓存所有Activity，通过list获取上一个activity的实例，从而获取id为content的ContentView的子View（即setContentView中的View），并进行滑动展示。  
 
 默认SwipeBackActivity是支持滑动返回的，不需要滑动返回时则需要复写SwipeBackActivity的方法`supportSlideBack`，其中方法`canBeSlideBack`意思是能否返回至本Activity；两个方法相互配合使用，以应对各种需求。 
@@ -102,7 +102,7 @@ Application在Api14之后添加了新的Callback方法
     private static final int MSG_SLIDE_CANCELED = 5;  //结束滑动，不返回前一个页面
     private static final int MSG_SLIDE_PROCEED = 6; //开始滑动，返回前一个页面
     private static final int MSG_SLIDE_FINISHED = 7;//结束滑动，返回前一个页面
-```  
+```
 
 1. 在Down手势发生时，只要将上一个Activity的ContentView从parentView中剥离，并加入到当前View的ContentView中；  
 2. 在滑动手势发生时，加上阴影View，并进行滑动；同时滑动的有当前Activity的ContentView、上一个Activity的ContentView和自定义的阴影View；  
@@ -122,10 +122,14 @@ Application在Api14之后添加了新的Callback方法
 ![image](./screenshot/swipeback.gif)
 
 # Update
- * 1.0.1  
+* 1.0.1  
    添加接口SlideBackManager；  
    修正手势判断，仅在可滑动区域进行滑动手势判断，不干扰点击或长按事件；  
    修复由于其他多线程在滑动页面进行中时，调用finish方法导致异常发生的问题
+* 1.0.2  
+   优化库中类的结构；  
+   为兼容高德地图的滑动事件，在触发滑动事件时，通知底层View的取消当前的点击或滑动事件；  
+   ​
 
 # License
 
@@ -134,9 +138,9 @@ Application在Api14之后添加了新的Callback方法
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
-
+    
        http://www.apache.org/licenses/LICENSE-2.0
-
+    
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.

@@ -7,9 +7,6 @@ import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.graphics.Canvas;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -138,8 +135,10 @@ public class SwipeBackHelper extends Handler {
                 if(isSliding == mIsSliding) {
                     return true;
                 } else {
-                    ev.setLocation(Integer.MAX_VALUE, 0); //首次判定为滑动需要修正事件：手动修改事件为 ACTION_CANCEL，并通知底层View
-                    return false;
+                    MotionEvent cancelEvent = MotionEvent.obtain(ev); //首次判定为滑动需要修正事件：手动修改事件为 ACTION_CANCEL，并通知底层View
+                    cancelEvent.setAction(MotionEvent.ACTION_CANCEL);
+                    mActivity.getWindow().superDispatchTouchEvent(cancelEvent);
+                    return true;
                 }
 
             case MotionEvent.ACTION_UP:
@@ -501,45 +500,5 @@ public class SwipeBackHelper extends Handler {
          */
         boolean canBeSlideBack();
 
-    }
-}
-
-class PreviousPageView extends View {
-    private View mView;
-
-    public PreviousPageView(Context context) {
-        super(context);
-    }
-
-    public void cacheView(View view) {
-        mView = view;
-        invalidate();
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        if (mView != null) {
-            mView.draw(canvas);
-            mView = null;
-        }
-    }
-}
-
-class ShadowView extends View {
-    private Drawable mDrawable;
-
-    public ShadowView(Context context) {
-        super(context);
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        if (mDrawable == null) {
-            int colors[] = {0x00000000, 0x17000000, 0x43000000};//分别为开始颜色，中间夜色，结束颜色
-            mDrawable = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, colors);
-        }
-        mDrawable.setBounds(0, 0, getMeasuredWidth(),  getMeasuredHeight());
-        mDrawable.draw(canvas);
     }
 }

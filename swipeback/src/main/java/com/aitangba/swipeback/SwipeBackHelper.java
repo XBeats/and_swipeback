@@ -254,7 +254,7 @@ public class SwipeBackHelper extends Handler {
 
                 Activity activity = mActivity;
                 activity.finish();
-                activity.overridePendingTransition(0, 0);
+                activity.overridePendingTransition(android.R.anim.fade_in, R.anim.hold_on);
                 break;
 
             default:

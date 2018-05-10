@@ -14,4 +14,8 @@
         android:layout_centerInParent="true"
         android:text="@string/desc_slide_back"/>
 
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"/>
 </LinearLayout>

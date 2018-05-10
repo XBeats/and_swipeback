@@ -10,6 +10,7 @@ import android.content.res.TypedArray;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.view.MotionEvent;
 import android.view.View;
@@ -25,7 +26,7 @@ import android.widget.FrameLayout;
  * Created by fhf11991 on 2016/9/18.
  */
 
-public class SwipeBackHelper extends Handler {
+public class SwipeBackHelper extends Handler implements SwipeIntercept {
 
     private static final String TAG = "SwipeBackHelper";
 
@@ -77,6 +78,7 @@ public class SwipeBackHelper extends Handler {
         mEdgeSize = (int) (EDGE_SIZE * density + 0.5f); //滑动拦截事件的区域
     }
 
+    @Override
     public boolean processTouchEvent(MotionEvent ev) {
         if(!mIsSupportSlideBack) { //不支持滑动返回，则手势事件交给View处理
             return false;
@@ -166,6 +168,7 @@ public class SwipeBackHelper extends Handler {
         return false;
     }
 
+    @Override
     public void finishSwipeImmediately() {
         if(mIsSliding) {
             mViewManager.addCacheView();
@@ -481,24 +484,5 @@ public class SwipeBackHelper extends Handler {
             }
             return mCurrentContentView.getChildAt(index);
         }
-    }
-
-    public interface SlideBackManager {
-
-        Activity getSlideActivity();
-
-        /**
-         * 是否支持滑动返回
-         *
-         * @return
-         */
-        boolean supportSlideBack();
-
-        /**
-         * 能否滑动返回至当前Activity
-         * @return
-         */
-        boolean canBeSlideBack();
-
     }
 }

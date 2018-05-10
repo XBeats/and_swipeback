@@ -10,16 +10,16 @@ import android.view.MotionEvent;
  * Created by fhf11991 on 2016/7/25.
  */
 
-public class SwipeBackActivity extends AppCompatActivity implements SwipeBackHelper.SlideBackManager {
+public class SwipeBackActivity extends AppCompatActivity implements SlideBackManager {
 
     private static final String TAG = "SwipeBackActivity";
 
-    private SwipeBackHelper mSwipeBackHelper;
+    private SwipeIntercept mSwipeBackHelper;
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if(mSwipeBackHelper == null) {
-            mSwipeBackHelper = new SwipeBackHelper(this);
+            mSwipeBackHelper = new SwipeHelper(this);
         }
         return mSwipeBackHelper.processTouchEvent(ev) || super.dispatchTouchEvent(ev);
     }

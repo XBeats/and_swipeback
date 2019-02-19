@@ -7,6 +7,7 @@ import android.view.View;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
 
 /**
  * Created by fhf11991 on 2016/7/25.
@@ -21,7 +22,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        findViewById(R.id.swipe_btn).setOnClickListener(new View.OnClickListener() {
+        final Button button = findViewById(R.id.swipe_btn);
+        button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Page = 1;
@@ -38,7 +40,28 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         mWebView.loadUrl("http://www.baidu.com/");
-    }
+
+        button.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                button.setText("测试22");
+            }
+        }, 2000);
+
+        button.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                button.setText("测试44");
+            }
+        }, 4000);
+
+
+        button.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                button.setText("测试66");
+            }
+        }, 6000);}
 
     @Override
     protected void onResume() {

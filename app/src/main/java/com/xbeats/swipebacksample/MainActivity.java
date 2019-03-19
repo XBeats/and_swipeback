@@ -1,5 +1,6 @@
 package com.xbeats.swipebacksample;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -17,6 +18,7 @@ public class MainActivity extends AppCompatActivity {
     public static int Page = 1;
     private WebView mWebView;
 
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -40,28 +42,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         mWebView.loadUrl("http://www.baidu.com/");
-
-        button.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                button.setText("测试22");
-            }
-        }, 2000);
-
-        button.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                button.setText("测试44");
-            }
-        }, 4000);
-
-
-        button.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                button.setText("测试66");
-            }
-        }, 6000);}
+    }
 
     @Override
     protected void onResume() {

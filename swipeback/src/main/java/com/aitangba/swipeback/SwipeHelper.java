@@ -5,6 +5,9 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.app.Activity;
+import android.content.Context;
+import android.content.res.TypedArray;
+import android.support.v4.content.ContextCompat;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -12,9 +15,19 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 
 public class SwipeHelper implements SwipeIntercept {
+
+    private static final String TAG = "SwipeBackHelper";
+
+    private static final int MSG_ACTION_DOWN = 1; //点击事件
+    private static final int MSG_ACTION_UP = 3;  //点击结束
+    private static final int MSG_SLIDE_CANCEL = 4; //开始滑动，不返回前一个页面
+    private static final int MSG_SLIDE_CANCELED = 5;  //结束滑动，不返回前一个页面
+    private static final int MSG_SLIDE_PROCEED = 6; //开始滑动，返回前一个页面
+    private static final int MSG_SLIDE_FINISHED = 7;//结束滑动，返回前一个页面
 
     private static final int EDGE_SIZE = 20;  //dp 默认拦截手势区间
     private static final int SHADOW_WIDTH = 50; //px 阴影宽度
@@ -39,7 +52,7 @@ public class SwipeHelper implements SwipeIntercept {
         mActivity = slideBackManager.getSlideActivity();
         mViewManager = new ViewManager();
         mIsSupportSlideBack = slideBackManager.supportSlideBack();
-        mCurrentContentView = getContentView(mActivity);
+        mCurrentContentView = (FrameLayout) mActivity.findViewById(Window.ID_ANDROID_CONTENT);
 
         mTouchSlop = ViewConfiguration.get(mActivity).getScaledTouchSlop();
 
@@ -70,9 +83,7 @@ public class SwipeHelper implements SwipeIntercept {
         final int actionIndex = ev.getActionIndex();
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                if (!mViewManager.addViews()) {
-                    return false;
-                }
+                changeStatus(MSG_ACTION_DOWN);
                 break;
 
             case MotionEvent.ACTION_POINTER_DOWN:
@@ -113,13 +124,13 @@ public class SwipeHelper implements SwipeIntercept {
             case MotionEvent.ACTION_OUTSIDE:
                 if (mDistanceX == 0) { //没有进行滑动
                     mIsSliding = false;
-                    onActionUp();
+                    changeStatus(MSG_ACTION_UP);
                     return false;
                 }
 
                 if (mIsSliding && actionIndex == 0) { // 取消滑动 或 手势抬起 ，而且手势事件是第一手势，开始滑动动画
                     mIsSliding = false;
-                    onActionUp();
+                    changeStatus(MSG_ACTION_UP);
                     return true;
                 } else if (mIsSliding) {
                     return true;
@@ -139,23 +150,63 @@ public class SwipeHelper implements SwipeIntercept {
         }
     }
 
-    private void onActionUp() {
-        final int width = mActivity.getResources().getDisplayMetrics().widthPixels;
-        if (mDistanceX == 0) {
-            resetViewsAndStatus();
-        } else if (mDistanceX > width / 4) {
-            startSlideAnim(false);
-        } else {
-            startSlideAnim(true);
+    /**
+     * 处理事件（滑动事件除外）
+     * @param status
+     */
+    private void changeStatus(int status) {
+        switch (status) {
+            case MSG_ACTION_DOWN:
+                // hide input method
+                InputMethodManager inputMethod = (InputMethodManager) mActivity.getSystemService(Context.INPUT_METHOD_SERVICE);
+                View view = mActivity.getCurrentFocus();
+                if (view != null && inputMethod != null) {
+                    inputMethod.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                }
+                if (!mViewManager.addViewFromPreviousActivity()) return;
+                // add shadow view on the left of content view
+                mViewManager.addShadowView();
+                if (mCurrentContentView.getChildCount() >= 3) {
+                    View curView = mViewManager.getDisplayView();
+                    if (curView.getBackground() == null) {
+                        int color = getWindowBackgroundColor();
+                        curView.setBackgroundColor(color);
+                    }
+                }
+                break;
+            case MSG_ACTION_UP:
+                final int width = mActivity.getResources().getDisplayMetrics().widthPixels;
+                if (mDistanceX == 0) {
+                    if (mCurrentContentView.getChildCount() >= 3) {
+                        mViewManager.removeShadowView();
+                        mViewManager.resetPreviousView();
+                    }
+                } else if (mDistanceX > width / 4) {
+                    changeStatus(MSG_SLIDE_PROCEED);
+                } else {
+                    changeStatus(MSG_SLIDE_CANCEL);
+                }
+                break;
+            case MSG_SLIDE_CANCEL:
+                startSlideAnim(true);
+                break;
+            case MSG_SLIDE_CANCELED:
+                mDistanceX = 0;
+                mIsSliding = false;
+                mViewManager.removeShadowView();
+                mViewManager.resetPreviousView();
+                break;
+            case MSG_SLIDE_PROCEED:
+                startSlideAnim(false);
+                break;
+            case MSG_SLIDE_FINISHED:
+                mViewManager.addCacheView();
+                mViewManager.removeShadowView();
+                mViewManager.resetPreviousView();
+                break;
+            default:
+                break;
         }
-    }
-
-    private void resetViewsAndStatus() {
-        mDistanceX = 0;
-        mIsSliding = false;
-        mIsSlideAnimPlaying = false;
-
-        mViewManager.removeViews();
     }
 
     /**
@@ -168,7 +219,7 @@ public class SwipeHelper implements SwipeIntercept {
         View currentActivityContentView = mViewManager.getDisplayView();
 
         if (previewActivityContentView == null || currentActivityContentView == null || shadowView == null) {
-            resetViewsAndStatus();
+            changeStatus(MSG_SLIDE_CANCELED);
             return;
         }
 
@@ -179,7 +230,7 @@ public class SwipeHelper implements SwipeIntercept {
             mDistanceX = 0;
         }
 
-        previewActivityContentView.setX(-width / 3 + mDistanceX / 3);
+        previewActivityContentView.setX((-width + mDistanceX) / 3);
         shadowView.setX(mDistanceX - SHADOW_WIDTH);
         currentActivityContentView.setX(mDistanceX);
     }
@@ -205,8 +256,8 @@ public class SwipeHelper implements SwipeIntercept {
         ObjectAnimator previewViewAnim = new ObjectAnimator();
         previewViewAnim.setInterpolator(interpolator);
         previewViewAnim.setProperty(View.TRANSLATION_X);
-        float preViewStart = mDistanceX / 3 - width / 3;
-        float preViewStop = slideCanceled ? -width / 3 : 0;
+        float preViewStart = (mDistanceX - width) / 3 ;
+        float preViewStop = slideCanceled ? (-(float) width / 3) : 0;
         previewViewAnim.setFloatValues(preViewStart, preViewStop);
         previewViewAnim.setTarget(previewView);
 
@@ -237,12 +288,17 @@ public class SwipeHelper implements SwipeIntercept {
             @Override
             public void onAnimationEnd(Animator animation) {
                 animation.removeAllListeners();
-                mAnimatorSet.cancel();
+                if(mAnimatorSet != null) {
+                    mAnimatorSet.removeListener(this);
+                }
                 if (slideCanceled) {
-                    resetViewsAndStatus();
+                    mIsSlideAnimPlaying = false;
+                    previewView.setX(0);
+                    shadowView.setX(-SHADOW_WIDTH);
+                    currentView.setX(0);
+                    changeStatus(MSG_SLIDE_CANCELED);
                 } else {
-                    mActivity.finish();
-                    mActivity.overridePendingTransition(android.R.anim.fade_in, R.anim.hold_on);
+                    changeStatus(MSG_SLIDE_FINISHED);
                 }
             }
         });
@@ -250,92 +306,118 @@ public class SwipeHelper implements SwipeIntercept {
         mIsSlideAnimPlaying = true;
     }
 
-    private FrameLayout getContentView(Activity activity) {
-        return (FrameLayout) activity.findViewById(Window.ID_ANDROID_CONTENT);
-    }
-
     private class ViewManager {
         private Activity mPreviousActivity;
-        private PreviousPageView mPreviousContentView;
+        private View mPreviousContentView;
         private View mShadowView;
+
 
         /**
          * Remove view from previous Activity and add into current Activity
          *
          * @return Is view added successfully
          */
-        private boolean addViews() {
+        private boolean addViewFromPreviousActivity() {
             if (mCurrentContentView.getChildCount() == 0) {
                 mPreviousActivity = null;
                 mPreviousContentView = null;
                 return false;
             }
-
             mPreviousActivity = ActivityLifecycleHelper.getPreviousActivity();
             if (mPreviousActivity == null) {
-                mPreviousActivity = null;
                 mPreviousContentView = null;
                 return false;
             }
-
-            // previous activity not support to be swipeBack...
+            //Previous activity not support to be swipeBack...
             if (mPreviousActivity instanceof SlideBackManager &&
                     !((SlideBackManager) mPreviousActivity).canBeSlideBack()) {
                 mPreviousActivity = null;
                 mPreviousContentView = null;
                 return false;
             }
-
-            ViewGroup previousActivityContainer = getContentView(mPreviousActivity);
+            ViewGroup previousActivityContainer = (ViewGroup) mPreviousActivity.findViewById(Window.ID_ANDROID_CONTENT);
             if (previousActivityContainer == null || previousActivityContainer.getChildCount() == 0) {
                 mPreviousActivity = null;
                 mPreviousContentView = null;
                 return false;
             }
-
-            // add shadow view on the left of content view
-            mShadowView = new ShadowView(mActivity);
-            mShadowView.setX(-SHADOW_WIDTH);
-            final FrameLayout.LayoutParams shadowLayoutParams = new FrameLayout.LayoutParams(
-                    SHADOW_WIDTH, FrameLayout.LayoutParams.MATCH_PARENT);
-            mCurrentContentView.addView(this.mShadowView, 0, shadowLayoutParams);
-
-            // add the cache view which cache the view of previous activity
-            View view = previousActivityContainer.getChildAt(0);
-            mPreviousContentView = new PreviousPageView(mActivity);
-            mPreviousContentView.cacheView(view);
-            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(view.getMeasuredWidth(), view.getMeasuredHeight());
-            mCurrentContentView.addView(mPreviousContentView, 0, layoutParams);
+            mPreviousContentView = previousActivityContainer.getChildAt(0);
+            previousActivityContainer.removeView(mPreviousContentView);
+            mCurrentContentView.addView(mPreviousContentView, 0);
             return true;
         }
 
-        private void removeViews() {
-            // remove the shadowView at current Activity
-            if (mShadowView != null) {
-                mCurrentContentView.removeView(mShadowView);
-                mShadowView = null;
-            }
-
-            // remove the previousContentView at current Activity
-            if (mPreviousContentView != null) {
-                mPreviousContentView.cacheView(null);
-                mCurrentContentView.removeView(mPreviousContentView);
-                mPreviousContentView = null;
-            }
-
+        /**
+         * Remove the PreviousContentView at current Activity and put it into previous Activity.
+         */
+        private void resetPreviousView() {
+            if (mPreviousContentView == null) return;
+            View view = mPreviousContentView;
+            view.setX(0);
+            mCurrentContentView.removeView(view);
+            mPreviousContentView = null;
+            if (mPreviousActivity == null || mPreviousActivity.isFinishing()) return;
+            Activity preActivity = mPreviousActivity;
+            final ViewGroup previewContentView = (ViewGroup) preActivity.findViewById(Window.ID_ANDROID_CONTENT);
+            previewContentView.addView(view);
             mPreviousActivity = null;
         }
 
+        /**
+         * add shadow view on the left of content view
+         */
+        private synchronized void addShadowView() {
+            if (mShadowView == null) {
+                mShadowView = new ShadowView(mActivity);
+                mShadowView.setX(-SHADOW_WIDTH);
+            }
+            final FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                    SHADOW_WIDTH, FrameLayout.LayoutParams.MATCH_PARENT);
+            if (this.mShadowView.getParent() == null) {
+                mCurrentContentView.addView(this.mShadowView, 1, layoutParams);
+            } else {
+                this.removeShadowView();
+                this.addShadowView();
+            }
+        }
+
+        private void removeShadowView() {
+            if (mShadowView == null) return;
+            mCurrentContentView.removeView(mShadowView);
+            mShadowView = null;
+        }
+
+        private void addCacheView() {
+            final View previousView = mPreviousContentView;
+            PreviousPageView previousPageView = new PreviousPageView(mActivity);
+            mCurrentContentView.addView(previousPageView, 0);
+            previousPageView.cacheView(previousView);
+        }
+
+
         private View getDisplayView() {
             int index = 0;
-            if (mPreviousContentView != null) {
+            if (mViewManager.mPreviousContentView != null) {
                 index = index + 1;
             }
-
-            if (mShadowView != null) {
+            if (mViewManager.mShadowView != null) {
                 index = index + 1;
             }
             return mCurrentContentView.getChildAt(index);
+        }
+    }
+
+    private int getWindowBackgroundColor() {
+        TypedArray array = null;
+        try {
+            array = mActivity.getTheme().obtainStyledAttributes(new int[]{android.R.attr.windowBackground});
+            return array.getColor(0, ContextCompat.getColor(mActivity, android.R.color.transparent));
+        } catch (Exception e) {
+            return ContextCompat.getColor(mActivity, android.R.color.transparent);
+        } finally {
+            if (array != null) {
+                array.recycle();
+            }
         }
     }
 }

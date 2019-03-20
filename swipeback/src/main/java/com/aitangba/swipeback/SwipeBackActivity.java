@@ -1,7 +1,6 @@
 package com.aitangba.swipeback;
 
 import android.app.Activity;
-import android.content.Context;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MotionEvent;
 
@@ -9,24 +8,34 @@ import android.view.MotionEvent;
 /**
  * Created by fhf11991 on 2016/7/25.
  */
+public class SwipeBackActivity extends AppCompatActivity implements SwipeBackHelper.SlideBackManager {
 
-public class SwipeBackActivity extends AppCompatActivity implements SlideBackManager {
-
-    private static final String TAG = "SwipeBackActivity";
-
-    private SwipeIntercept mSwipeBackHelper;
+    private SwipeBackHelper mSwipeBackHelper;
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        if(mSwipeBackHelper == null) {
-            mSwipeBackHelper = new SwipeHelper(this);
+        if (!supportSlideBack()) {
+            return super.dispatchTouchEvent(ev);
+        }
+        if (mSwipeBackHelper == null) {
+            mSwipeBackHelper = new SwipeBackHelper(this, new SlideActivityAdapter());
+            mSwipeBackHelper.setOnSlideFinishListener(new SwipeBackHelper.OnSlideFinishListener() {
+                @Override
+                public void onFinish() {
+                    SwipeBackActivity.this.finish();
+                    overridePendingTransition(android.R.anim.fade_in, R.anim.hold_on);
+                }
+            });
         }
         return mSwipeBackHelper.processTouchEvent(ev) || super.dispatchTouchEvent(ev);
     }
 
     @Override
-    public Activity getSlideActivity() {
-        return this;
+    public void finish() {
+        if (mSwipeBackHelper != null) {
+            mSwipeBackHelper.finishSwipeImmediately();
+        }
+        super.finish();
     }
 
     @Override
@@ -39,12 +48,11 @@ public class SwipeBackActivity extends AppCompatActivity implements SlideBackMan
         return true;
     }
 
-    @Override
-    public void finish() {
-        if(mSwipeBackHelper != null) {
-            mSwipeBackHelper.finishSwipeImmediately();
-            mSwipeBackHelper = null;
+    private static class SlideActivityAdapter implements SlideActivityCallback {
+
+        @Override
+        public Activity getPreviousActivity() {
+            return ActivityLifecycleHelper.getPreviousActivity();
         }
-        super.finish();
     }
 }

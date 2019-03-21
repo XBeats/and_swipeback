@@ -2,11 +2,8 @@ apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 
-// This is the library version used when deploying the artifact
-version = "1.0.3"
 android {
     compileSdkVersion 28
-    resourcePrefix "swipeback_"    //这个随便填
     defaultConfig {
         minSdkVersion 14
         targetSdkVersion 28
@@ -35,6 +32,7 @@ dependencies {
 def siteUrl = 'https://github.com/XBeats/and_swipeback' // 项目的主页
 def gitUrl = 'https://github.com/XBeats/and_swipeback.git' // Git仓库的url
 group = "com.aitangba" // Maven Group ID for the artifact，一般填你唯一的包名
+version = "1.0.3" // This is the library version used when deploying the artifact
 install {
     repositories.mavenInstaller {
         // This generates POM.xml with proper parameters

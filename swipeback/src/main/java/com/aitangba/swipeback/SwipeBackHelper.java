@@ -6,6 +6,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.support.annotation.NonNull;
 import android.view.MotionEvent;
 import android.view.View;
@@ -328,12 +329,16 @@ public class SwipeBackHelper {
             previousParams.topMargin = mStatusBarOffset;
             previousActivityContainer.removeView(mPreviousDisplayView);
             mCurrentContentView.addView(mPreviousDisplayView, 0, previousParams);
+            final int width = mCurrentActivity.getResources().getDisplayMetrics().widthPixels;
+            mPreviousDisplayView.setTranslationX(-(float) width / 3);
 
-            // add shadow view
+            // add shadow view, make up a background color for TemporaryView.
             mTemporaryView = new TemporaryView(mCurrentActivity);
             mTemporaryView.setShadowWidth(SHADOW_WIDTH);
-            mTemporaryView.setX(-SHADOW_WIDTH);
+            mTemporaryView.setTranslationX(-SHADOW_WIDTH);
             mCurrentContentView.addView(this.mTemporaryView, 1);
+            int color = getWindowBackgroundColor(mCurrentActivity);
+            mTemporaryView.setBgColor(color);
 
             // init display view
             mDisplayView = mCurrentContentView.getChildAt(2);
@@ -408,5 +413,19 @@ public class SwipeBackHelper {
 
     public interface OnSlideFinishListener {
         void onFinish();
+    }
+
+    private static int getWindowBackgroundColor(Activity activity) {
+        TypedArray array = null;
+        try {
+            array = activity.getTheme().obtainStyledAttributes(new int[]{android.R.attr.windowBackground});
+            return array.getColor(0, 0);
+        } catch (Exception e) {
+            return 0;
+        } finally {
+            if (array != null) {
+                array.recycle();
+            }
+        }
     }
 }

@@ -1,14 +1,14 @@
 package com.aitangba.swipeback;
 
 import android.app.Activity;
-import android.support.v7.app.AppCompatActivity;
+import android.support.v4.app.FragmentActivity;
 import android.view.MotionEvent;
 
 
 /**
  * Created by fhf11991 on 2016/7/25.
  */
-public class SwipeBackActivity extends AppCompatActivity implements SwipeBackHelper.SlideBackManager {
+public class SwipeBackActivity extends FragmentActivity implements SwipeBackHelper.SlideBackManager {
 
     private SwipeBackHelper mSwipeBackHelper;
 

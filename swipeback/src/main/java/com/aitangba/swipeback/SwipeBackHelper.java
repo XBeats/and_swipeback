@@ -26,11 +26,11 @@ public class SwipeBackHelper {
     private static final String TAG = "SwipeBackHelper";
 
     private static final int STATE_ACTION_DOWN = 1; //点击事件
-    private static final int STATE_ACTION_UP = 3;  //点击结束
-    private static final int STATE_BACK_START = 4; //开始滑动，不返回前一个页面
-    private static final int STATE_BACK_FINISH = 5;  //结束滑动，不返回前一个页面
-    private static final int STATE_FORWARD_START = 6; //开始滑动，返回前一个页面
-    private static final int STATE_FORWARD_FINISH = 7;//结束滑动，返回前一个页面
+    private static final int STATE_ACTION_UP = 2;  //点击结束
+    private static final int STATE_BACK_START = 3; //开始滑动，不返回前一个页面
+    private static final int STATE_BACK_FINISH = 4;  //结束滑动，不返回前一个页面
+    private static final int STATE_FORWARD_START = 5; //开始滑动，返回前一个页面
+    private static final int STATE_FORWARD_FINISH = 6;//结束滑动，返回前一个页面
 
     private final Interpolator mInterpolator = new DecelerateInterpolator(2f);
 

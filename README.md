@@ -15,9 +15,9 @@
 **Firstly,add the following lines to your app/build.gradle.** 
 ```gradle
 dependencies {  
-    compile 'com.aitangba:swipeback:1.0.1'
+    compile 'com.aitangba:swipeback:1.0.3'
 }
-```
+```  
 **Secondly, add the following lines to your application.**
 ``` java
 public class CustomApplication extends Application{
@@ -54,21 +54,33 @@ Application在Api14之后添加了新的Callback方法
  
    public class SwipeBackActivity extends AppCompatActivity implements SwipeBackHelper.SlideBackManager {
 
-    private static final String TAG = "SwipeBackActivity";
-
     private SwipeBackHelper mSwipeBackHelper;
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        if(mSwipeBackHelper == null) {
-            mSwipeBackHelper = new SwipeBackHelper(this);
+        if (!supportSlideBack()) {
+            return super.dispatchTouchEvent(ev);
+        }
+        if (mSwipeBackHelper == null) {
+            mSwipeBackHelper = new SwipeBackHelper(this, new SlideActivityAdapter());
+			// 滑动返回触发finish
+            mSwipeBackHelper.setOnSlideFinishListener(new SwipeBackHelper.OnSlideFinishListener() {
+                @Override
+                public void onFinish() {
+                    SwipeBackActivity.this.finish();
+                    overridePendingTransition(android.R.anim.fade_in, R.anim.hold_on);
+                }
+            });
         }
         return mSwipeBackHelper.processTouchEvent(ev) || super.dispatchTouchEvent(ev);
     }
 
     @Override
-    public Activity getSlideActivity() {
-        return this;
+    public void finish() {
+        if (mSwipeBackHelper != null) {
+            mSwipeBackHelper.finishSwipeImmediately();
+        }
+        super.finish();
     }
 
     @Override
@@ -80,14 +92,14 @@ Application在Api14之后添加了新的Callback方法
     public boolean canBeSlideBack() {
         return true;
     }
+		
+	// 独立获取上一个Activity
+    private static class SlideActivityAdapter implements SlideActivityCallback {
 
-    @Override
-    public void finish() {
-        if(mSwipeBackHelper != null) {
-            mSwipeBackHelper.finishSwipeImmediately();
-            mSwipeBackHelper = null;
+        @Override
+        public Activity getPreviousActivity() {
+            return ActivityLifecycleHelper.getPreviousActivity();
         }
-        super.finish();
     }
 }
 ```
@@ -95,18 +107,17 @@ Application在Api14之后添加了新的Callback方法
 
 ```java  
 
-    private static final int MSG_ACTION_DOWN = 1; //点击事件  
-    private static final int MSG_ACTION_MOVE = 2; //滑动事件
-    private static final int MSG_ACTION_UP = 3;  //点击结束
-    private static final int MSG_SLIDE_CANCEL = 4; //开始滑动，不返回前一个页面
-    private static final int MSG_SLIDE_CANCELED = 5;  //结束滑动，不返回前一个页面
-    private static final int MSG_SLIDE_PROCEED = 6; //开始滑动，返回前一个页面
-    private static final int MSG_SLIDE_FINISHED = 7;//结束滑动，返回前一个页面
+    private static final int STATE_ACTION_DOWN = 1; //点击事件
+    private static final int STATE_ACTION_UP = 2;  //点击结束
+    private static final int STATE_BACK_START = 3; //开始滑动，不返回前一个页面
+    private static final int STATE_BACK_FINISH = 4;  //结束滑动，不返回前一个页面
+    private static final int STATE_FORWARD_START = 5; //开始滑动，返回前一个页面
+    private static final int STATE_FORWARD_FINISH = 6;//结束滑动，返回前一个页面
 ```
 
 1. 在Down手势发生时，只要将上一个Activity的ContentView从parentView中剥离，并加入到当前View的ContentView中；  
 2. 在滑动手势发生时，加上阴影View，并进行滑动；同时滑动的有当前Activity的ContentView、上一个Activity的ContentView和自定义的阴影View；  
-3. 在Up手势发生时，判断滑动是否超过半屏，触发返回操作，并展示滑动动画；  
+3. 在Up手势发生时，判断滑动是否超过屏幕1/4，触发返回操作，并展示滑动动画；  
 4. 滑动取消或滑动返回发生时，需要将上个Activity的ContentView从新加入到上一个Acitivity的布局中。  
 
 ***Tips:***  
@@ -129,11 +140,15 @@ Application在Api14之后添加了新的Callback方法
 * 1.0.2  
    优化库中类的结构；  
    为兼容高德地图的滑动事件，在触发滑动事件时，通知底层View的取消当前的点击或滑动事件；  
-   ​
+   
+* 1.0.3  
+   SwipeBackHelper去除继承hanhler；  
+   优化SwipeBackHelper代码结构，将涉及View的操作和动画、手势​代码分离；  
+   兼容当前Activity和上一个Actviity Theme 不同的情况（由于StatusBar的高度产生的高度差）
 
 # License
 
-    Copyright 2016-2017 XBeats
+    Copyright 2016-2019 XBeats
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.

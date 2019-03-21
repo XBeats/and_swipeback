@@ -144,7 +144,7 @@ Application在Api14之后添加了新的Callback方法
 * 1.0.3  
    SwipeBackHelper去除继承hanhler；  
    优化SwipeBackHelper代码结构，将涉及View的操作和动画、手势​代码分离；  
-   兼容当前Activity和上一个Actviity Theme 不同的情况（由于StatusBar的高度产生的高度差）
+   兼容当前Activity和上一个Activity Theme 不同的情况（由于StatusBar的高度产生的高度差）
 
 # License
 

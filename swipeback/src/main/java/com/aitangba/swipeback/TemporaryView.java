@@ -6,13 +6,15 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 
+import java.lang.ref.WeakReference;
+
 /**
  * Created by XBeats on 2019/3/20
  */
 class TemporaryView extends View {
 
+    private WeakReference<View> mView;
     private Drawable mDrawable;
-    private View mView;
     private int mShadowWidth;
 
     public TemporaryView(Context context) {
@@ -28,16 +30,17 @@ class TemporaryView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (mView == null) {
+        if (mView != null && mView.get() != null) {
+            mView.get().draw(canvas);
+        } else {
             mDrawable.setBounds(0, 0, mShadowWidth, getMeasuredHeight());
             mDrawable.draw(canvas);
-        } else {
-            mView.draw(canvas);
         }
     }
 
     public void cacheView(View view) {
-        mView = view;
+        mView = new WeakReference<>(view);
+
         invalidate();
     }
 }

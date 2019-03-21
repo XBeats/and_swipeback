@@ -17,6 +17,8 @@ import android.view.animation.Interpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 
+import java.lang.ref.WeakReference;
+
 /**
  * Created by XBeats on 2019/3/20
  */
@@ -203,9 +205,7 @@ public class SwipeBackHelper {
         mDistanceX = Math.max(0, mDistanceX);
         mDistanceX = Math.min(width, mDistanceX);
 
-        mViewManager.mPreviousDisplayView.setX((-width + mDistanceX) / 3);
-        mViewManager.mShadowView.setX(mDistanceX - SHADOW_WIDTH);
-        mViewManager.mDisplayView.setX(mDistanceX);
+        mViewManager.translateViews(mDistanceX, width);
     }
 
     private void startBackAnim() {
@@ -230,9 +230,6 @@ public class SwipeBackHelper {
                 super.onAnimationEnd(animation);
                 animation.removeListener(this);
                 mIsSlideAnimPlaying = false;
-                mViewManager.mPreviousDisplayView.setX(0);
-                mViewManager.mShadowView.setX(-SHADOW_WIDTH);
-                mViewManager.mDisplayView.setX(0);
                 changeStatus(STATE_BACK_FINISH);
             }
         });
@@ -269,12 +266,15 @@ public class SwipeBackHelper {
 
     private static class ViewManager {
         private Activity mCurrentActivity;
+        private WeakReference<Activity> mPreviousActivity;
         private SlideActivityCallback mSlideActivityCallback;
 
         private ViewGroup mCurrentContentView;
         private View mDisplayView;
-        private TemporaryView mShadowView;
+        private TemporaryView mTemporaryView;
         private View mPreviousDisplayView;
+
+        private int mStatusBarOffset; // make up for the different from the current Activity to previous;
 
         private ViewManager(Activity currentActivity, @NonNull SlideActivityCallback slideActivityCallback) {
             mCurrentActivity = currentActivity;
@@ -290,65 +290,97 @@ public class SwipeBackHelper {
             mCurrentContentView = (ViewGroup) mCurrentActivity.findViewById(Window.ID_ANDROID_CONTENT);
 
             if (mCurrentContentView.getChildCount() == 0) {
-                mPreviousDisplayView = null;
+                mCurrentContentView = null;
                 return false;
             }
             Activity previousActivity = mSlideActivityCallback.getPreviousActivity();
             if (previousActivity == null) {
-                mPreviousDisplayView = null;
+                mCurrentContentView = null;
                 return false;
             }
             //previous Activity not support to be swipeBack...
             if (previousActivity instanceof SlideBackManager && !((SlideBackManager) previousActivity).canBeSlideBack()) {
-                mPreviousDisplayView = null;
+                mCurrentContentView = null;
                 return false;
             }
             ViewGroup previousActivityContainer = (ViewGroup) previousActivity.findViewById(Window.ID_ANDROID_CONTENT);
             if (previousActivityContainer == null || previousActivityContainer.getChildCount() == 0) {
-                mPreviousDisplayView = null;
+                mCurrentContentView = null;
                 return false;
             }
 
+            // Cache the previous Activity, make sure return view to the right Activity!
+            mPreviousActivity = new WeakReference<>(previousActivity);
+
             // add content view from previous Activity
             mPreviousDisplayView = previousActivityContainer.getChildAt(0);
+            int height = mCurrentActivity.getResources().getDisplayMetrics().heightPixels;
+            int previousViewHeight = previousActivityContainer.getMeasuredHeight();
+            int currentViewHeight = mCurrentContentView.getMeasuredHeight();
+            boolean isCurrentFull = currentViewHeight == height;
+            boolean isPreviousFull = previousViewHeight == height;
+            if (isCurrentFull) {
+                mStatusBarOffset = isPreviousFull ? 0 : (height - previousViewHeight);
+            } else {
+                mStatusBarOffset = isPreviousFull ? -(height - currentViewHeight) : 0;
+            }
+            final FrameLayout.LayoutParams previousParams = (FrameLayout.LayoutParams) mPreviousDisplayView.getLayoutParams();
+            previousParams.topMargin = mStatusBarOffset;
             previousActivityContainer.removeView(mPreviousDisplayView);
-            mCurrentContentView.addView(mPreviousDisplayView, 0);
+            mCurrentContentView.addView(mPreviousDisplayView, 0, previousParams);
 
             // add shadow view
-            mShadowView = new TemporaryView(mCurrentActivity);
-            mShadowView.setShadowWidth(SHADOW_WIDTH);
-            mShadowView.setX(-SHADOW_WIDTH);
-            final FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
-            mCurrentContentView.addView(this.mShadowView, 1, layoutParams);
+            mTemporaryView = new TemporaryView(mCurrentActivity);
+            mTemporaryView.setShadowWidth(SHADOW_WIDTH);
+            mTemporaryView.setX(-SHADOW_WIDTH);
+            mCurrentContentView.addView(this.mTemporaryView, 1);
 
             // init display view
             mDisplayView = mCurrentContentView.getChildAt(2);
             return true;
         }
 
-        private void clearViews(boolean showCache) {
+        private void clearViews(boolean forward) {
+            if (mCurrentContentView == null) {
+                return;
+            }
+
             // recover the content view from previous Activity
             mPreviousDisplayView.setX(0);
             mCurrentContentView.removeView(mPreviousDisplayView);
-            Activity previousActivity = mSlideActivityCallback.getPreviousActivity();
-            if (previousActivity != null && !previousActivity.isFinishing()) {
-                final ViewGroup previewContentView = (ViewGroup) previousActivity.findViewById(Window.ID_ANDROID_CONTENT);
-                previewContentView.addView(mPreviousDisplayView);
+            if (mPreviousActivity != null && mPreviousActivity.get() != null && !mPreviousActivity.get().isFinishing()) {
+                final ViewGroup previewContentView = (ViewGroup) mPreviousActivity.get().findViewById(Window.ID_ANDROID_CONTENT);
+                final FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+                previewContentView.addView(mPreviousDisplayView, layoutParams);
             }
 
-            if (showCache) {
-                mShadowView.setTranslationX(0);
-                mShadowView.cacheView(mPreviousDisplayView);
-                mCurrentContentView.bringChildToFront(mShadowView);
+            // in forward case, TemporaryView should cache the previous view.
+            if (forward) {
+                mTemporaryView.setTranslationX(0);
+                mTemporaryView.cacheView(mPreviousDisplayView);
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) mTemporaryView.getLayoutParams();
+                params.topMargin = mStatusBarOffset;
+                mCurrentContentView.bringChildToFront(mTemporaryView);
             } else {
-                mCurrentContentView.removeView(mShadowView);
+                mCurrentContentView.removeView(mTemporaryView);
+                mDisplayView.setTranslationX(0);
             }
 
-            mShadowView = null;
+            mTemporaryView = null;
             mPreviousDisplayView = null;
             mCurrentContentView = null;
             mDisplayView = null;
+        }
+
+        private void translateViews(float x, int screenWidth) {
+            if (mCurrentContentView == null) {
+                return;
+            }
+
+            mPreviousDisplayView.setX((-screenWidth + x) / 3);
+            mTemporaryView.setX(x - SHADOW_WIDTH);
+            mDisplayView.setX(x);
         }
     }
 

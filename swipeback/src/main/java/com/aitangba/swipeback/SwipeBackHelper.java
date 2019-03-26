@@ -6,7 +6,6 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.support.annotation.NonNull;
 import android.view.MotionEvent;
 import android.view.View;
@@ -35,7 +34,6 @@ public class SwipeBackHelper {
 
     private final Interpolator mInterpolator = new DecelerateInterpolator(2f);
 
-    private static final int SHADOW_WIDTH = 50; //px 阴影宽度
     private static final int EDGE_SIZE = 20;  //dp 默认拦截手势区间
     private int mEdgeSize;  //px 拦截手势区间
     private boolean mIsSliding; //是否正在滑动
@@ -272,10 +270,9 @@ public class SwipeBackHelper {
 
         private ViewGroup mCurrentContentView;
         private View mDisplayView;
-        private TemporaryView mTemporaryView;
         private View mPreviousDisplayView;
 
-        private int mStatusBarOffset; // make up for the different from the current Activity to previous;
+        private TemporaryViewGroup mTemporaryViewGroup;
 
         private ViewManager(Activity currentActivity, @NonNull SlideActivityCallback slideActivityCallback) {
             mCurrentActivity = currentActivity;
@@ -290,58 +287,34 @@ public class SwipeBackHelper {
         private boolean prepareViews() {
             mCurrentContentView = (ViewGroup) mCurrentActivity.findViewById(Window.ID_ANDROID_CONTENT);
 
-            if (mCurrentContentView.getChildCount() == 0) {
-                mCurrentContentView = null;
-                return false;
-            }
-            Activity previousActivity = mSlideActivityCallback.getPreviousActivity();
-            if (previousActivity == null) {
-                mCurrentContentView = null;
-                return false;
-            }
             //previous Activity not support to be swipeBack...
-            if (previousActivity instanceof SlideBackManager && !((SlideBackManager) previousActivity).canBeSlideBack()) {
+            Activity previousActivity = mSlideActivityCallback.getPreviousActivity();
+            if (previousActivity == null || (previousActivity instanceof SlideBackManager && !((SlideBackManager) previousActivity).canBeSlideBack())) {
                 mCurrentContentView = null;
                 return false;
             }
-            ViewGroup previousActivityContainer = (ViewGroup) previousActivity.findViewById(Window.ID_ANDROID_CONTENT);
-            if (previousActivityContainer == null || previousActivityContainer.getChildCount() == 0) {
+
+            // init display view, maybe null
+            mDisplayView = mCurrentContentView.getChildAt(0);
+
+            // init previousView from previous Activity, which can not be null
+            ViewGroup previousContentView = (ViewGroup) previousActivity.findViewById(Window.ID_ANDROID_CONTENT);
+            mPreviousDisplayView = previousContentView.getChildAt(0);
+            if (mPreviousDisplayView == null) {
                 mCurrentContentView = null;
+                mDisplayView = null;
                 return false;
             }
 
             // Cache the previous Activity, make sure return view to the right Activity!
             mPreviousActivity = new WeakReference<>(previousActivity);
 
-            // add content view from previous Activity
-            mPreviousDisplayView = previousActivityContainer.getChildAt(0);
-            int height = mCurrentActivity.getResources().getDisplayMetrics().heightPixels;
-            int previousViewHeight = previousActivityContainer.getMeasuredHeight();
-            int currentViewHeight = mCurrentContentView.getMeasuredHeight();
-            boolean isCurrentFull = currentViewHeight == height;
-            boolean isPreviousFull = previousViewHeight == height;
-            if (isCurrentFull) {
-                mStatusBarOffset = isPreviousFull ? 0 : (height - previousViewHeight);
-            } else {
-                mStatusBarOffset = isPreviousFull ? -(height - currentViewHeight) : 0;
-            }
-            final FrameLayout.LayoutParams previousParams = (FrameLayout.LayoutParams) mPreviousDisplayView.getLayoutParams();
-            previousParams.topMargin = mStatusBarOffset;
-            previousActivityContainer.removeView(mPreviousDisplayView);
-            mCurrentContentView.addView(mPreviousDisplayView, 0, previousParams);
-            final int width = mCurrentActivity.getResources().getDisplayMetrics().widthPixels;
-            mPreviousDisplayView.setTranslationX(-(float) width / 3);
-
-            // add shadow view, make up a background color for TemporaryView.
-            mTemporaryView = new TemporaryView(mCurrentActivity);
-            mTemporaryView.setShadowWidth(SHADOW_WIDTH);
-            mTemporaryView.setTranslationX(-SHADOW_WIDTH);
-            mCurrentContentView.addView(this.mTemporaryView, 1);
-            int color = getWindowBackgroundColor(mCurrentActivity);
-            mTemporaryView.setBgColor(color);
-
-            // init display view
-            mDisplayView = mCurrentContentView.getChildAt(2);
+            // remove view from previous Activity.
+            // as a child to TemporaryViewGroup.
+            previousContentView.removeView(mPreviousDisplayView);
+            mTemporaryViewGroup = new TemporaryViewGroup(mCurrentActivity);
+            mTemporaryViewGroup.addPreviousView(mCurrentContentView, previousContentView, mPreviousDisplayView);
+            mCurrentContentView.addView(mTemporaryViewGroup, 0);
             return true;
         }
 
@@ -352,27 +325,18 @@ public class SwipeBackHelper {
 
             // recover the content view from previous Activity
             mPreviousDisplayView.setX(0);
-            mCurrentContentView.removeView(mPreviousDisplayView);
+            ViewGroup previewContentView = null;
             if (mPreviousActivity != null && mPreviousActivity.get() != null && !mPreviousActivity.get().isFinishing()) {
-                final ViewGroup previewContentView = (ViewGroup) mPreviousActivity.get().findViewById(Window.ID_ANDROID_CONTENT);
-                final FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
-                previewContentView.addView(mPreviousDisplayView, layoutParams);
+                previewContentView = (ViewGroup) mPreviousActivity.get().findViewById(Window.ID_ANDROID_CONTENT);
+            }
+            mTemporaryViewGroup.clearPreviousView(previewContentView, mPreviousDisplayView);
+
+            // in forward case, temporaryView should cache the previous view.
+            if (!forward) {
+                mCurrentContentView.removeView(mTemporaryViewGroup);
             }
 
-            // in forward case, TemporaryView should cache the previous view.
-            if (forward) {
-                mTemporaryView.setTranslationX(0);
-                mTemporaryView.cacheView(mPreviousDisplayView);
-                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) mTemporaryView.getLayoutParams();
-                params.topMargin = mStatusBarOffset;
-                mCurrentContentView.bringChildToFront(mTemporaryView);
-            } else {
-                mCurrentContentView.removeView(mTemporaryView);
-                mDisplayView.setTranslationX(0);
-            }
-
-            mTemporaryView = null;
+            mTemporaryViewGroup = null;
             mPreviousDisplayView = null;
             mCurrentContentView = null;
             mDisplayView = null;
@@ -383,9 +347,11 @@ public class SwipeBackHelper {
                 return;
             }
 
+            mTemporaryViewGroup.setDistanceX(x);
             mPreviousDisplayView.setX((-screenWidth + x) / 3);
-            mTemporaryView.setX(x - SHADOW_WIDTH);
-            mDisplayView.setX(x);
+            if (mDisplayView != null) {
+                mDisplayView.setX(x);
+            }
         }
     }
 
@@ -413,19 +379,5 @@ public class SwipeBackHelper {
 
     public interface OnSlideFinishListener {
         void onFinish();
-    }
-
-    private static int getWindowBackgroundColor(Activity activity) {
-        TypedArray array = null;
-        try {
-            array = activity.getTheme().obtainStyledAttributes(new int[]{android.R.attr.windowBackground});
-            return array.getColor(0, 0);
-        } catch (Exception e) {
-            return 0;
-        } finally {
-            if (array != null) {
-                array.recycle();
-            }
-        }
     }
 }
